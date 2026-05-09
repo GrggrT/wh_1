@@ -28,6 +28,9 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
             "/archive_site <site_id> — архивировать объект\n"
             "/whoami — кто я / /my_rate — моя ставка\n"
             "/break_start /break_stop — учёт перерыва внутри смены\n"
+            "/shifts — последние смены\n"
+            "/edit_shift <id> <поле> <значение> — изменить смену (бригадир/владелец)\n"
+            "/delete_shift <id> — удалить смену (бригадир/владелец)\n"
             "/cancel — отмена текущего действия"
         ),
         "private_bot": "Это приватный бот.",
@@ -146,6 +149,19 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
         "break_stopped": "Перерыв окончен. Длительность: {minutes} мин.",
         "already_on_break": "Перерыв уже идёт. Закрой его командой /break_stop.",
         "no_open_break": "Сейчас нет активного перерыва.",
+        "shifts_empty": "За последние 14 дней смен нет.",
+        "shifts_list": "Последние смены:\n{body}",
+        "edit_shift_usage": (
+            "Используй: /edit_shift <id> <поле> <значение>\n"
+            "Поля: start, end, note, work_type, site\n"
+            "Дата/время: YYYY-MM-DD HH:MM (локальное время)"
+        ),
+        "edit_shift_invalid_field": "Недопустимое поле. Доступные: {fields}.",
+        "edit_shift_invalid_value": "Не получилось обновить: {reason}.",
+        "edit_shift_done": "Смена #{id} обновлена ({field}).",
+        "delete_shift_usage": "Используй: /delete_shift <id>",
+        "delete_shift_done": "Смена #{id} удалена.",
+        "shift_not_found": "Смена не найдена.",
     },
 }
 
