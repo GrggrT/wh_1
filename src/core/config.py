@@ -22,6 +22,10 @@ class Settings(BaseSettings):
     supabase_service_role_key: str = ""
     supabase_storage_bucket: str = "shift-photos"
 
+    # Daily digest delivered to owner_tg_id
+    daily_digest_enabled: bool = True
+    daily_digest_hour: int = 22  # local hour (timezone setting)
+
 
 def get_settings() -> Settings:
     return Settings()  # type: ignore[call-arg]

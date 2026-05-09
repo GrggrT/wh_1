@@ -1,7 +1,9 @@
 """Background task that periodically auto-closes long shifts and sends reminders."""
 
 import asyncio
+from datetime import date, datetime
 from decimal import Decimal
+from zoneinfo import ZoneInfo
 
 import structlog
 from aiogram import Bot
@@ -10,6 +12,7 @@ from aiogram.exceptions import TelegramAPIError
 from src.bot.strings import t
 from src.core.config import Settings
 from src.core.db import get_session
+from src.services.digest import build_daily_digest
 from src.services.reports import compute_hours
 from src.services.scheduler import (
     auto_close_shift,
@@ -20,6 +23,9 @@ from src.services.scheduler import (
 )
 
 logger = structlog.get_logger()
+
+
+_last_digest_date: date | None = None
 
 
 async def _process_once(bot: Bot, settings: Settings) -> None:
@@ -71,6 +77,28 @@ async def _process_once(bot: Bot, settings: Settings) -> None:
         await session.commit()
 
 
+async def _maybe_send_daily_digest(bot: Bot, settings: Settings) -> None:
+    """Once per day after the configured local hour, DM the owner a summary."""
+    global _last_digest_date
+    if not settings.daily_digest_enabled:
+        return
+    tz = ZoneInfo(settings.timezone)
+    now_local = datetime.now(tz=tz)
+    today = now_local.date()
+    if _last_digest_date == today:
+        return
+    if now_local.hour < settings.daily_digest_hour:
+        return
+    body = ""
+    async for session in get_session():
+        body = await build_daily_digest(session, tz, now_local)
+    try:
+        await bot.send_message(settings.owner_tg_id, body)
+        _last_digest_date = today
+    except TelegramAPIError:
+        logger.warning("daily_digest_send_failed")
+
+
 async def run_scheduler(bot: Bot, settings: Settings) -> None:
     """Run the maintenance loop until cancelled."""
     interval = settings.scheduler_interval_seconds
@@ -78,6 +106,7 @@ async def run_scheduler(bot: Bot, settings: Settings) -> None:
     while True:
         try:
             await _process_once(bot, settings)
+            await _maybe_send_daily_digest(bot, settings)
         except Exception:  # noqa: BLE001
             logger.exception("scheduler_iteration_failed")
         await asyncio.sleep(interval)

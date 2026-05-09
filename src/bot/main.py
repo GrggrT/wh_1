@@ -95,6 +95,7 @@ _BOT_COMMANDS: list[BotCommand] = [
     BotCommand(command="archive_site", description="Архивировать объект: /archive_site <id>"),
     BotCommand(command="whoami", description="Кто я и в какой бригаде"),
     BotCommand(command="status", description="Статус бота (владелец)"),
+    BotCommand(command="digest", description="Сводка дня (владелец)"),
     BotCommand(command="cancel", description="Отмена текущего действия"),
 ]
 

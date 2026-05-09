@@ -19,6 +19,7 @@ from src.services.crews import (
     get_crew_for_foreman,
     list_crew_members,
 )
+from src.services.digest import build_daily_digest
 from src.services.reports import compute_hours
 
 router = Router()
@@ -80,6 +81,20 @@ async def cmd_status(message: Message, db_user: User | None = None) -> None:
             started=_STARTED_AT.strftime("%Y-%m-%d %H:%M UTC"),
         ),
     )
+
+
+@router.message(Command("digest"))
+async def cmd_digest(message: Message, db_user: User | None = None) -> None:
+    """Owner: show today's digest on demand."""
+    if db_user is None or db_user.role != ROLE_OWNER:
+        await message.answer(t("not_authorized"))
+        return
+    settings = get_settings()
+    tz = ZoneInfo(settings.timezone)
+    body = ""
+    async for session in get_session():
+        body = await build_daily_digest(session, tz)
+    await message.answer(body)
 
 
 @router.message(Command("crew_open"))
