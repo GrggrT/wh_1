@@ -1,5 +1,6 @@
-"""Shift listing, edit, and delete with audit log."""
+"""Shift listing, edit, delete, and restore with audit log."""
 
+from datetime import datetime
 from zoneinfo import ZoneInfo
 
 from aiogram import Router
@@ -10,7 +11,7 @@ from sqlalchemy import select
 from src.bot.strings import t
 from src.core.config import get_settings
 from src.core.db import get_session
-from src.core.models import Site, User
+from src.core.models import AuditLog, Shift, Site, User
 from src.services.crews import ROLE_FOREMAN, ROLE_OWNER, get_crew_for_foreman
 from src.services.shift_edits import (
     EDITABLE_FIELDS,
@@ -150,6 +151,137 @@ async def cmd_delete_shift(
         await delete_shift(session, db_user, shift)
         await session.commit()
     await message.answer(t("delete_shift_done", id=shift_id))
+
+
+@router.message(Command("shift_photos"))
+async def cmd_shift_photos(
+    message: Message, command: CommandObject, db_user: User | None = None,
+) -> None:
+    """Resend the start/end photos of a shift via Telegram file_id."""
+    if db_user is None:
+        return
+    if not command.args:
+        await message.answer(t("shift_photos_usage"))
+        return
+    try:
+        shift_id = int(command.args.strip())
+    except ValueError:
+        await message.answer(t("shift_photos_usage"))
+        return
+
+    start_id: str | None = None
+    end_id: str | None = None
+    async for session in get_session():
+        shift = await get_shift(session, shift_id)
+        if shift is None:
+            await message.answer(t("shift_not_found"))
+            return
+        # Authorization: owner of shift, owner role, or foreman of crew member
+        if db_user.role == ROLE_OWNER or shift.user_id == db_user.id:
+            pass
+        elif db_user.role == ROLE_FOREMAN:
+            crew = await get_crew_for_foreman(session, db_user.id)
+            owner = (
+                await session.execute(
+                    select(User).where(User.id == shift.user_id),
+                )
+            ).scalar_one_or_none()
+            if crew is None or owner is None or owner.crew_id != crew.id:
+                await message.answer(t("not_authorized"))
+                return
+        else:
+            await message.answer(t("not_authorized"))
+            return
+        start_id = shift.start_photo_file_id
+        end_id = shift.end_photo_file_id
+
+    sent_any = False
+    if start_id:
+        await message.answer_photo(start_id, caption=t("photo_start_caption"))
+        sent_any = True
+    if end_id:
+        await message.answer_photo(end_id, caption=t("photo_end_caption"))
+        sent_any = True
+    if not sent_any:
+        await message.answer(t("shift_photos_missing"))
+
+
+@router.message(Command("restore_shift"))
+async def cmd_restore_shift(
+    message: Message, command: CommandObject, db_user: User | None = None,
+) -> None:
+    """Owner: restore a deleted shift from its audit_log snapshot."""
+    if db_user is None or db_user.role != ROLE_OWNER:
+        await message.answer(t("not_authorized"))
+        return
+    if not command.args:
+        await message.answer(t("restore_shift_usage"))
+        return
+    try:
+        audit_id = int(command.args.strip())
+    except ValueError:
+        await message.answer(t("restore_shift_usage"))
+        return
+
+    async for session in get_session():
+        entry = (
+            await session.execute(select(AuditLog).where(AuditLog.id == audit_id))
+        ).scalar_one_or_none()
+        if entry is None or entry.action != "delete" or entry.entity_type != "shift":
+            await message.answer(t("restore_shift_not_found"))
+            return
+        snapshot_obj = entry.diff.get("snapshot")
+        if not isinstance(snapshot_obj, dict):
+            await message.answer(t("restore_shift_not_found"))
+            return
+        snapshot: dict[str, object] = snapshot_obj
+
+        def _as_int(val: object) -> int | None:
+            if isinstance(val, int):
+                return val
+            if isinstance(val, str) and val.isdigit():
+                return int(val)
+            return None
+
+        def _as_str(val: object) -> str | None:
+            return val if isinstance(val, str) else None
+
+        def _as_dt(val: object) -> datetime | None:
+            return datetime.fromisoformat(val) if isinstance(val, str) else None
+
+        shift_id_int = _as_int(snapshot.get("id"))
+        user_id_int = _as_int(snapshot.get("user_id"))
+        start_dt = _as_dt(snapshot.get("start_at"))
+        if shift_id_int is None or user_id_int is None or start_dt is None:
+            await message.answer(t("restore_shift_not_found"))
+            return
+
+        existing = await get_shift(session, shift_id_int)
+        if existing is not None:
+            await message.answer(t("restore_shift_already_exists"))
+            return
+
+        new_shift = Shift(
+            id=shift_id_int,
+            user_id=user_id_int,
+            site_id=_as_int(snapshot.get("site_id")),
+            start_at=start_dt,
+            end_at=_as_dt(snapshot.get("end_at")),
+            note=_as_str(snapshot.get("note")),
+            work_type=_as_str(snapshot.get("work_type")),
+        )
+        session.add(new_shift)
+        session.add(
+            AuditLog(
+                user_id=db_user.id,
+                entity_type="shift",
+                entity_id=new_shift.id,
+                action="restore",
+                diff={"from_audit_id": audit_id, "snapshot": snapshot},
+            ),
+        )
+        await session.commit()
+    await message.answer(t("restore_shift_done", id=shift_id_int))
 
 
 __all__ = ["router", "_can_admin_shift"]

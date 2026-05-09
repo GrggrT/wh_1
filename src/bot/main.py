@@ -91,6 +91,8 @@ _BOT_COMMANDS: list[BotCommand] = [
     BotCommand(command="work_type", description="Тип работ для открытой смены"),
     BotCommand(command="stop_for", description="Закрыть смену работника (бригадир)"),
     BotCommand(command="audit", description="История изменений смены (бригадир)"),
+    BotCommand(command="shift_photos", description="Фото смены: /shift_photos <id>"),
+    BotCommand(command="restore_shift", description="Восстановить удалённую (владелец)"),
     BotCommand(command="sites", description="Список объектов"),
     BotCommand(command="set_site_rate", description="Ставка объекта: /set_site_rate <id> <ставка>"),
     BotCommand(command="archive_site", description="Архивировать объект: /archive_site <id>"),

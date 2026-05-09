@@ -182,6 +182,14 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
             "Ставка по умолчанию для бригады «{crew}»: {rate} zł/ч. "
             "Применяется к новым работникам без своей ставки."
         ),
+        "shift_photos_usage": "Используй: /shift_photos <id>",
+        "shift_photos_missing": "У этой смены нет сохранённых фото.",
+        "photo_start_caption": "Фото начала смены",
+        "photo_end_caption": "Фото окончания смены",
+        "restore_shift_usage": "Используй: /restore_shift <audit_id>",
+        "restore_shift_not_found": "Запись об удалении не найдена.",
+        "restore_shift_already_exists": "Смена с этим id уже есть в базе.",
+        "restore_shift_done": "Смена #{id} восстановлена.",
     },
 }
 
