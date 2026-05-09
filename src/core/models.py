@@ -54,6 +54,8 @@ class Shift(Base):
     end_location = mapped_column(Geography("POINT", srid=4326), nullable=True)
     start_photo_file_id: Mapped[str | None] = mapped_column(Text)
     end_photo_file_id: Mapped[str | None] = mapped_column(Text)
+    start_photo_path: Mapped[str | None] = mapped_column(Text)
+    end_photo_path: Mapped[str | None] = mapped_column(Text)
     note: Mapped[str | None] = mapped_column(Text)
     work_type: Mapped[str | None] = mapped_column(Text)
     auto_closed: Mapped[bool] = mapped_column(

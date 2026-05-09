@@ -13,8 +13,10 @@ from src.bot.keyboards import (
 )
 from src.bot.states import ShiftStart, ShiftStop
 from src.bot.strings import t
+from src.core.config import get_settings
 from src.core.db import get_session
 from src.services.geofence import check_point_in_site
+from src.services.photos import archive_shift_photo
 from src.services.reports import compute_hours
 from src.services.shifts import (
     ShiftAlreadyOpenError,
@@ -156,10 +158,16 @@ async def handle_start_location(message: Message, state: FSMContext) -> None:
 @router.message(ShiftStart.awaiting_photo, F.photo)
 async def handle_start_photo(message: Message, state: FSMContext) -> None:
     assert message.photo is not None
+    assert message.bot is not None
 
     data = await state.get_data()
     shift_id: int = data["shift_id"]
     file_id = message.photo[-1].file_id
+
+    settings = get_settings()
+    storage_path = await archive_shift_photo(
+        message.bot, settings, shift_id, "start", file_id,
+    )
 
     async for session in get_session():
         from sqlalchemy import select
@@ -169,6 +177,8 @@ async def handle_start_photo(message: Message, state: FSMContext) -> None:
         res = await session.execute(select(Shift).where(Shift.id == shift_id))
         shift = res.scalar_one()
         shift.start_photo_file_id = file_id
+        if storage_path is not None:
+            shift.start_photo_path = storage_path
         await session.commit()
 
     await message.answer(t("photo_saved"), reply_markup=main_menu())
@@ -300,10 +310,16 @@ async def handle_end_location(message: Message, state: FSMContext) -> None:
 @router.message(ShiftStop.awaiting_end_photo, F.photo)
 async def handle_end_photo(message: Message, state: FSMContext) -> None:
     assert message.photo is not None
+    assert message.bot is not None
 
     data = await state.get_data()
     shift_id: int = data["shift_id"]
     file_id = message.photo[-1].file_id
+
+    settings = get_settings()
+    storage_path = await archive_shift_photo(
+        message.bot, settings, shift_id, "end", file_id,
+    )
 
     async for session in get_session():
         from sqlalchemy import select
@@ -313,6 +329,8 @@ async def handle_end_photo(message: Message, state: FSMContext) -> None:
         res = await session.execute(select(Shift).where(Shift.id == shift_id))
         shift = res.scalar_one()
         shift.end_photo_file_id = file_id
+        if storage_path is not None:
+            shift.end_photo_path = storage_path
         await session.commit()
 
     await message.answer(t("photo_saved"), reply_markup=main_menu())

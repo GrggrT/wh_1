@@ -17,6 +17,11 @@ class Settings(BaseSettings):
     # How often the scheduler loop wakes up (seconds)
     scheduler_interval_seconds: int = 300
 
+    # Supabase Storage for shift photos (optional — empty disables uploads)
+    supabase_url: str = ""
+    supabase_service_role_key: str = ""
+    supabase_storage_bucket: str = "shift-photos"
+
 
 def get_settings() -> Settings:
     return Settings()  # type: ignore[call-arg]
