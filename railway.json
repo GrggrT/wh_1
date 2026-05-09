@@ -4,7 +4,7 @@
     "builder": "NIXPACKS"
   },
   "deploy": {
-    "startCommand": "alembic upgrade head && python -m src.bot.main",
+    "startCommand": "python -m alembic upgrade head && python -m src.bot.main",
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 10
   }
