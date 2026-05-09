@@ -31,6 +31,10 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
             "/shifts — последние смены\n"
             "/edit_shift <id> <поле> <значение> — изменить смену (бригадир/владелец)\n"
             "/delete_shift <id> — удалить смену (бригадир/владелец)\n"
+            "/note <текст> — заметка к открытой смене\n"
+            "/work_type <тип> — тип работ для открытой смены\n"
+            "/stop_for <tg_id> — закрыть смену работника (бригадир)\n"
+            "/audit <id> — история изменений смены (бригадир)\n"
             "/cancel — отмена текущего действия"
         ),
         "private_bot": "Это приватный бот.",
@@ -162,6 +166,16 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
         "delete_shift_usage": "Используй: /delete_shift <id>",
         "delete_shift_done": "Смена #{id} удалена.",
         "shift_not_found": "Смена не найдена.",
+        "note_usage": "Используй: /note <текст заметки>",
+        "note_saved": "Заметка сохранена.",
+        "work_type_usage": "Используй: /work_type <тип работ>",
+        "work_type_saved": "Тип работ: {value}.",
+        "stop_for_usage": "Используй: /stop_for <tg_id>",
+        "stop_for_done": "Смена пользователя {name} закрыта.",
+        "no_open_shift_for_user": "У пользователя нет открытой смены.",
+        "audit_usage": "Используй: /audit <shift_id>",
+        "audit_empty": "По смене #{id} истории изменений нет.",
+        "audit_list": "История смены #{id}:\n{body}",
     },
 }
 

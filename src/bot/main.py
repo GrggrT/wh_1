@@ -17,6 +17,7 @@ from src.bot.handlers import (
     common,
     crew_admin,
     exports,
+    notes,
     reports,
     shift_edits,
     shifts,
@@ -85,6 +86,10 @@ _BOT_COMMANDS: list[BotCommand] = [
     BotCommand(command="shifts", description="Последние смены"),
     BotCommand(command="edit_shift", description="Изменить смену (бригадир/владелец)"),
     BotCommand(command="delete_shift", description="Удалить смену (бригадир/владелец)"),
+    BotCommand(command="note", description="Заметка к открытой смене"),
+    BotCommand(command="work_type", description="Тип работ для открытой смены"),
+    BotCommand(command="stop_for", description="Закрыть смену работника (бригадир)"),
+    BotCommand(command="audit", description="История изменений смены (бригадир)"),
     BotCommand(command="sites", description="Список объектов"),
     BotCommand(command="set_site_rate", description="Ставка объекта: /set_site_rate <id> <ставка>"),
     BotCommand(command="archive_site", description="Архивировать объект: /archive_site <id>"),
@@ -158,6 +163,7 @@ async def main() -> None:
     dp.include_router(shifts.router)
     dp.include_router(breaks.router)
     dp.include_router(shift_edits.router)
+    dp.include_router(notes.router)
     dp.include_router(reports.router)
     dp.include_router(exports.router)
 
