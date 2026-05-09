@@ -8,7 +8,8 @@ from zoneinfo import ZoneInfo
 from openpyxl import Workbook
 from openpyxl.styles import Font
 
-from src.core.models import Crew, Shift, Site, User
+from src.core.models import Break, Crew, Shift, Site, User
+from src.services.breaks import total_break_hours
 from src.services.reports import compute_hours, split_shift_at_midnight
 
 
@@ -40,8 +41,9 @@ def build_shift_rows(
     sites: dict[int, Site],
     user: User,
     tz: ZoneInfo,
+    breaks_by_shift: dict[int, list[Break]] | None = None,
 ) -> list[ShiftRow]:
-    """Build export rows, splitting shifts at midnight."""
+    """Build export rows, splitting shifts at midnight; subtract breaks per segment."""
     rows: list[ShiftRow] = []
 
     for shift in shifts:
@@ -57,16 +59,27 @@ def build_shift_rows(
         elif user.hourly_rate is not None:
             rate = user.hourly_rate
 
+        shift_breaks = (
+            (breaks_by_shift or {}).get(shift.id, []) if breaks_by_shift else []
+        )
+
         segments = split_shift_at_midnight(shift.start_at, shift.end_at, tz)
         for seg_start, seg_end in segments:
-            hours = compute_hours(seg_start, seg_end)
+            gross = compute_hours(seg_start, seg_end)
+            break_h = (
+                total_break_hours(shift_breaks, seg_start, seg_end)
+                if shift_breaks else Decimal(0)
+            )
+            net = gross - break_h
+            if net < 0:
+                net = Decimal(0)
             rows.append(
                 ShiftRow(
                     shift_date=seg_start.date(),
                     site_name=site_name,
                     start_time=seg_start.timetz(),
                     end_time=seg_end.timetz(),
-                    hours=hours.quantize(Decimal("0.01")),
+                    hours=net.quantize(Decimal("0.01")),
                     rate=rate,
                     note=shift.note,
                 )
@@ -81,9 +94,10 @@ def export_xlsx(
     user: User,
     tz: ZoneInfo,
     period: str,
+    breaks_by_shift: dict[int, list[Break]] | None = None,
 ) -> BytesIO:
     """Generate XLSX workbook and return as BytesIO."""
-    rows = build_shift_rows(shifts, sites, user, tz)
+    rows = build_shift_rows(shifts, sites, user, tz, breaks_by_shift)
     wb = Workbook()
 
     # Sheet 1 - Shifts
@@ -180,6 +194,7 @@ def export_crew_xlsx(
     sites: dict[int, Site],
     tz: ZoneInfo,
     period: str,
+    breaks_by_shift: dict[int, list[Break]] | None = None,
 ) -> BytesIO:
     """Generate a crew-wide workbook: one sheet per member + summary."""
     wb = Workbook()
@@ -201,7 +216,7 @@ def export_crew_xlsx(
     grand_amount = Decimal(0)
     for member in members:
         member_shifts = shifts_by_user.get(member.id, [])
-        rows = build_shift_rows(member_shifts, sites, member, tz)
+        rows = build_shift_rows(member_shifts, sites, member, tz, breaks_by_shift)
         member_hours = sum((r.hours for r in rows), Decimal(0))
         member_amount = sum(
             (r.amount for r in rows if r.amount is not None), Decimal(0),

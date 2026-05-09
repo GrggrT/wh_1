@@ -12,6 +12,7 @@ from src.bot.strings import t
 from src.core.config import get_settings
 from src.core.db import get_session
 from src.exporters.xlsx import export_xlsx
+from src.services.breaks import get_breaks_for_shifts
 from src.services.reports import get_shifts_for_period
 from src.services.shifts import ensure_user, get_user_sites
 
@@ -66,7 +67,12 @@ async def cmd_export(message: Message) -> None:
 
         sites_dict = {s.id: s for s in all_sites}
 
-        buffer = export_xlsx(shifts, sites_dict, user, tz, parts[1])
+        breaks_by_shift = await get_breaks_for_shifts(
+            session, [s.id for s in shifts],
+        )
+        buffer = export_xlsx(
+            shifts, sites_dict, user, tz, parts[1], breaks_by_shift,
+        )
 
     filename = f"timesheet_{message.from_user.full_name}_{parts[1]}.xlsx"
     doc = BufferedInputFile(buffer.read(), filename=filename)

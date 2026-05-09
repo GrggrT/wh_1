@@ -13,6 +13,7 @@ from aiogram.types import BotCommand, Message, TelegramObject
 
 from src.bot.handlers import (
     admin,
+    breaks,
     common,
     crew_admin,
     exports,
@@ -78,6 +79,8 @@ _BOT_COMMANDS: list[BotCommand] = [
     BotCommand(command="crew_rates", description="Ставки бригады (бригадир)"),
     BotCommand(command="set_rate", description="Установить ставку: /set_rate <tg_id> <ставка>"),
     BotCommand(command="my_rate", description="Моя ставка"),
+    BotCommand(command="break_start", description="Начать перерыв"),
+    BotCommand(command="break_stop", description="Завершить перерыв"),
     BotCommand(command="sites", description="Список объектов"),
     BotCommand(command="set_site_rate", description="Ставка объекта: /set_site_rate <id> <ставка>"),
     BotCommand(command="archive_site", description="Архивировать объект: /archive_site <id>"),
@@ -149,6 +152,7 @@ async def main() -> None:
     dp.include_router(admin.router)
     dp.include_router(crew_admin.router)
     dp.include_router(shifts.router)
+    dp.include_router(breaks.router)
     dp.include_router(reports.router)
     dp.include_router(exports.router)
 

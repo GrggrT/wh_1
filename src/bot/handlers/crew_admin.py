@@ -14,6 +14,7 @@ from src.core.config import get_settings
 from src.core.db import get_session
 from src.core.models import Shift, Site, User
 from src.exporters.xlsx import export_crew_xlsx
+from src.services.breaks import get_breaks_for_shifts
 from src.services.crews import (
     ROLE_FOREMAN,
     ROLE_OWNER,
@@ -152,13 +153,18 @@ async def _crew_period_summary(
         shifts = await get_shifts_for_users_in_period(
             session, member_ids, start_date, end_date, tz,
         )
+        breaks_by_shift = await get_breaks_for_shifts(
+            session, [s.id for s in shifts],
+        )
         by_user: dict[int, list[Shift]] = {m.id: [] for m in members}
         for shift in shifts:
             if shift.end_at is not None:
                 by_user[shift.user_id].append(shift)
         for member in members:
             user_shifts = by_user[member.id]
-            hours = compute_period_hours(user_shifts, start_date, end_date, tz)
+            hours = compute_period_hours(
+                user_shifts, start_date, end_date, tz, breaks_by_shift,
+            )
             count = len(user_shifts)
             if count == 0 and hours == 0:
                 continue
@@ -263,8 +269,12 @@ async def cmd_crew_export(
         else:
             sites_dict = {}
 
+        breaks_by_shift = await get_breaks_for_shifts(
+            session, [s.id for s in shifts],
+        )
         buffer = export_crew_xlsx(
             crew, members, shifts_by_user, sites_dict, tz, period,
+            breaks_by_shift,
         )
         crew_name = crew.name
 

@@ -7,7 +7,8 @@ from zoneinfo import ZoneInfo
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.core.models import Shift, Site
+from src.core.models import Break, Shift, Site
+from src.services.breaks import total_break_hours
 
 
 def compute_hours(start: datetime, end: datetime) -> Decimal:
@@ -57,9 +58,13 @@ async def get_shifts_for_period(
 
 
 def compute_period_hours(
-    shifts: list[Shift], start_date: date, end_date: date, tz: ZoneInfo
+    shifts: list[Shift],
+    start_date: date,
+    end_date: date,
+    tz: ZoneInfo,
+    breaks_by_shift: dict[int, list[Break]] | None = None,
 ) -> Decimal:
-    """Total hours within a date range, accounting for midnight splits."""
+    """Total NET hours within a date range; subtracts breaks clipped to window."""
     period_start = datetime.combine(start_date, time.min, tzinfo=tz)
     period_end = datetime.combine(end_date + timedelta(days=1), time.min, tzinfo=tz)
     total = Decimal(0)
@@ -69,8 +74,20 @@ def compute_period_hours(
             continue
         effective_start = max(shift.start_at, period_start)
         effective_end = min(shift.end_at, period_end)
-        if effective_end > effective_start:
-            total += compute_hours(effective_start, effective_end)
+        if effective_end <= effective_start:
+            continue
+        gross = compute_hours(effective_start, effective_end)
+        break_h = Decimal(0)
+        if breaks_by_shift is not None:
+            shift_breaks = breaks_by_shift.get(shift.id, [])
+            if shift_breaks:
+                break_h = total_break_hours(
+                    shift_breaks, effective_start, effective_end,
+                )
+        net = gross - break_h
+        if net < 0:
+            net = Decimal(0)
+        total += net
 
     return total.quantize(Decimal("0.01"))
 

@@ -27,6 +27,7 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
             "/set_site_rate <site_id> <ставка> — ставка объекта\n"
             "/archive_site <site_id> — архивировать объект\n"
             "/whoami — кто я / /my_rate — моя ставка\n"
+            "/break_start /break_stop — учёт перерыва внутри смены\n"
             "/cancel — отмена текущего действия"
         ),
         "private_bot": "Это приватный бот.",
@@ -141,6 +142,10 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
         "archive_site_usage": "Используй: /archive_site <site_id>",
         "site_archived": "Объект «{name}» переведён в архив.",
         "crew_rates_list": "Ставки в бригаде «{crew}»:\n{body}",
+        "break_started": "Перерыв начат в {time}. Когда вернёшься — /break_stop.",
+        "break_stopped": "Перерыв окончен. Длительность: {minutes} мин.",
+        "already_on_break": "Перерыв уже идёт. Закрой его командой /break_stop.",
+        "no_open_break": "Сейчас нет активного перерыва.",
     },
 }
 

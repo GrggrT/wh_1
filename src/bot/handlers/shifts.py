@@ -15,6 +15,7 @@ from src.bot.states import ShiftStart, ShiftStop
 from src.bot.strings import t
 from src.core.config import get_settings
 from src.core.db import get_session
+from src.services.breaks import get_breaks_for_shift, total_break_hours
 from src.services.geofence import check_point_in_site
 from src.services.photos import archive_shift_photo
 from src.services.reports import compute_hours
@@ -271,7 +272,13 @@ async def handle_end_location(message: Message, state: FSMContext) -> None:
         assert shift.end_at is not None
         from decimal import Decimal as Dec
 
-        hours = compute_hours(shift.start_at, shift.end_at).quantize(Dec("0.01"))
+        gross_hours = compute_hours(shift.start_at, shift.end_at)
+        shift_breaks = await get_breaks_for_shift(session, shift.id)
+        break_h = total_break_hours(shift_breaks, shift.start_at, shift.end_at)
+        net = gross_hours - break_h
+        if net < Dec(0):
+            net = Dec(0)
+        hours = net.quantize(Dec("0.01"))
 
         # Check if we can compute amount
         rate = None
