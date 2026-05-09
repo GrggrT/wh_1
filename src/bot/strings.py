@@ -98,6 +98,29 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
             "Бригада за месяц:\n{body}\n\nИтого: {total_hours} ч ({total_count})"
         ),
         "crew_export_usage": "Используй: /crew_export YYYY-MM",
+        "whoami": (
+            "Кто ты:\n"
+            "Имя: {name}\n"
+            "Telegram ID: {tg_id}\n"
+            "Роль: {role}\n"
+            "Бригада: {crew}\n"
+            "Ставка: {rate}"
+        ),
+        "status": (
+            "Статус:\n"
+            "Uptime: {uptime}\n"
+            "Запуск: {started}\n"
+            "База данных: {db}"
+        ),
+        "crew_open_none": "В бригаде «{crew}» сейчас никто не на смене.",
+        "crew_open_summary": "Бригада «{crew}» сейчас на смене:\n{body}",
+        "crew_open_row": "• {name} — «{site}», с {start} ({hours} ч)",
+        "internal_error": (
+            "Что-то пошло не так. Я уже сообщил владельцу. Попробуй ещё раз позже."
+        ),
+        "owner_error_alert": (
+            "\u26a0 Ошибка в обработчике:\n<code>{error}</code>\n\nUpdate id: {update_id}"
+        ),
     },
 }
 

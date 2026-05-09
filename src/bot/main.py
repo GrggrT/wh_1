@@ -11,9 +11,10 @@ from aiogram.exceptions import TelegramAPIError
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.types import BotCommand, Message, TelegramObject
 
-from src.bot.handlers import common, crew_admin, exports, reports, shifts
+from src.bot.handlers import common, crew_admin, exports, reports, shifts, system
 from src.bot.scheduler_runner import run_scheduler
-from src.core.config import get_settings
+from src.bot.strings import t
+from src.core.config import Settings, get_settings
 from src.core.db import dispose_engine, get_session, init_engine
 from src.services.crews import ROLE_OWNER, ensure_owner_role
 from src.services.shifts import ensure_user
@@ -65,6 +66,9 @@ _BOT_COMMANDS: list[BotCommand] = [
     BotCommand(command="crew_export", description="Экспорт бригады: /crew_export YYYY-MM"),
     BotCommand(command="add_foreman", description="Назначить бригадира (владелец)"),
     BotCommand(command="foremen", description="Список бригадиров (владелец)"),
+    BotCommand(command="crew_open", description="Кто сейчас на смене (бригадир)"),
+    BotCommand(command="whoami", description="Кто я и в какой бригаде"),
+    BotCommand(command="status", description="Статус бота (владелец)"),
     BotCommand(command="cancel", description="Отмена текущего действия"),
 ]
 
@@ -74,6 +78,38 @@ async def _publish_bot_commands(bot: Bot) -> None:
         await bot.set_my_commands(_BOT_COMMANDS)
     except TelegramAPIError:
         logger.warning("set_my_commands_failed")
+
+
+def _register_error_handler(dp: Dispatcher, bot: Bot, settings: Settings) -> None:
+    """Catch all uncaught handler errors: reply to user, alert owner, log."""
+
+    @dp.errors()
+    async def handle_error(event: Any) -> bool:  # noqa: ANN401
+        update = getattr(event, "update", None)
+        exception = getattr(event, "exception", None)
+        update_id = getattr(update, "update_id", "?") if update else "?"
+        logger.exception(
+            "handler_error",
+            update_id=update_id,
+            exc_info=exception,
+        )
+        message: Message | None = None
+        if update is not None:
+            message = getattr(update, "message", None)
+        if message is not None:
+            with contextlib.suppress(TelegramAPIError):
+                await message.answer(t("internal_error"))
+        with contextlib.suppress(TelegramAPIError):
+            await bot.send_message(
+                settings.owner_tg_id,
+                t(
+                    "owner_error_alert",
+                    error=str(exception)[:300],
+                    update_id=str(update_id),
+                ),
+                parse_mode="HTML",
+            )
+        return True
 
 
 async def main() -> None:
@@ -95,10 +131,13 @@ async def main() -> None:
     dp.message.middleware(UserResolveMiddleware(settings.owner_tg_id))
 
     dp.include_router(common.router)
+    dp.include_router(system.router)
     dp.include_router(crew_admin.router)
     dp.include_router(shifts.router)
     dp.include_router(reports.router)
     dp.include_router(exports.router)
+
+    _register_error_handler(dp, bot, settings)
 
     logger.info("bot_starting", owner_tg_id=settings.owner_tg_id)
 
