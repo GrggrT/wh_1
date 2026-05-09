@@ -9,16 +9,21 @@ from src.bot.strings import t
 from src.core.models import Site
 
 
-def main_menu() -> ReplyKeyboardMarkup:
-    return ReplyKeyboardMarkup(
-        keyboard=[
-            [
-                KeyboardButton(text=f"\U0001f7e2 {t('start_shift_btn')}"),
-                KeyboardButton(text=f"\U0001f534 {t('stop_shift_btn')}"),
-            ],
+def main_menu(role: str = "worker") -> ReplyKeyboardMarkup:
+    rows: list[list[KeyboardButton]] = [
+        [
+            KeyboardButton(text=f"\U0001f7e2 {t('start_shift_btn')}"),
+            KeyboardButton(text=f"\U0001f534 {t('stop_shift_btn')}"),
         ],
-        resize_keyboard=True,
-    )
+    ]
+    if role in ("foreman", "owner"):
+        rows.append(
+            [
+                KeyboardButton(text=f"\U0001f465 {t('crew_today_btn')}"),
+                KeyboardButton(text=f"\U0001f4e9 {t('invite_btn')}"),
+            ],
+        )
+    return ReplyKeyboardMarkup(keyboard=rows, resize_keyboard=True)
 
 
 def site_selection(sites: list[Site]) -> InlineKeyboardMarkup:

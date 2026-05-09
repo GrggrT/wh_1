@@ -19,6 +19,7 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
             "/add_foreman <tg_id> [название] — назначить бригадира (владелец)\n"
             "/foremen — список бригадиров (владелец)\n"
             "/crew_today /crew_week /crew_month — отчёты по бригаде\n"
+            "/crew_export YYYY-MM — Excel по бригаде\n"
             "/cancel — отмена текущего действия"
         ),
         "private_bot": "Это приватный бот.",
@@ -54,6 +55,8 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
         "export_ready": "Выгрузка за {period} готова.",
         "start_shift_btn": "Начать смену",
         "stop_shift_btn": "Закончить смену",
+        "crew_today_btn": "Бригада сегодня",
+        "invite_btn": "Пригласить",
         "integrity_error": "Не удалось — уже есть открытая смена. /cancel",
         "error_generic": "Произошла ошибка. Попробуй позже.",
         "site_created": "Объект «{name}» создан.",
@@ -94,6 +97,7 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
         "crew_month_summary": (
             "Бригада за месяц:\n{body}\n\nИтого: {total_hours} ч ({total_count})"
         ),
+        "crew_export_usage": "Используй: /crew_export YYYY-MM",
     },
 }
 

@@ -1,17 +1,19 @@
 """Owner and foreman commands: manage foremen, crews, and invite codes."""
 
+import re
 from datetime import date, timedelta
 from decimal import Decimal
 from zoneinfo import ZoneInfo
 
-from aiogram import Router
+from aiogram import F, Router
 from aiogram.filters import Command, CommandObject
-from aiogram.types import Message
+from aiogram.types import BufferedInputFile, Message
 
 from src.bot.strings import t
 from src.core.config import get_settings
 from src.core.db import get_session
-from src.core.models import Shift, User
+from src.core.models import Shift, Site, User
+from src.exporters.xlsx import export_crew_xlsx
 from src.services.crews import (
     ROLE_FOREMAN,
     ROLE_OWNER,
@@ -80,6 +82,7 @@ async def cmd_list_foremen(message: Message, db_user: User | None = None) -> Non
 
 
 @router.message(Command("invite"))
+@router.message(F.text == "\U0001f4e9 Пригласить")
 async def cmd_invite(message: Message, db_user: User | None = None) -> None:
     if db_user is None or db_user.role not in (ROLE_FOREMAN, ROLE_OWNER):
         await message.answer(t("not_authorized"))
@@ -177,6 +180,7 @@ async def _crew_period_summary(
 
 
 @router.message(Command("crew_today"))
+@router.message(F.text.contains("Бригада сегодня"))
 async def cmd_crew_today(message: Message, db_user: User | None = None) -> None:
     today = date.today()
     await _crew_period_summary(
@@ -202,6 +206,72 @@ async def cmd_crew_month(message: Message, db_user: User | None = None) -> None:
         message, db_user, start_of_month, today,
         "crew_no_shifts_month", "crew_month_summary",
     )
+
+
+_PERIOD_RE = re.compile(r"^(\d{4})-(\d{2})$")
+
+
+@router.message(Command("crew_export"))
+async def cmd_crew_export(
+    message: Message, command: CommandObject, db_user: User | None = None,
+) -> None:
+    if db_user is None or db_user.role not in (ROLE_FOREMAN, ROLE_OWNER):
+        await message.answer(t("not_authorized"))
+        return
+    if not command.args or not _PERIOD_RE.match(command.args.strip()):
+        await message.answer(t("crew_export_usage"))
+        return
+    period = command.args.strip()
+    match = _PERIOD_RE.match(period)
+    assert match is not None
+    year, month = int(match.group(1)), int(match.group(2))
+    start_date = date(year, month, 1)
+    next_month = (
+        date(year + 1, 1, 1) if month == 12 else date(year, month + 1, 1)
+    )
+    end_date = next_month - timedelta(days=1)
+
+    settings = get_settings()
+    tz = ZoneInfo(settings.timezone)
+
+    async for session in get_session():
+        crew = await get_crew_for_foreman(session, db_user.id)
+        if crew is None:
+            await message.answer(t("no_crew"))
+            return
+        members = await list_crew_members(session, crew.id)
+        if not members:
+            await message.answer(t("crew_empty", crew=crew.name))
+            return
+        member_ids = [m.id for m in members]
+        shifts = await get_shifts_for_users_in_period(
+            session, member_ids, start_date, end_date, tz,
+        )
+        if not any(s.end_at is not None for s in shifts):
+            await message.answer(t("export_empty", period=period))
+            return
+        shifts_by_user: dict[int, list[Shift]] = {m.id: [] for m in members}
+        for shift in shifts:
+            shifts_by_user[shift.user_id].append(shift)
+
+        from sqlalchemy import select
+
+        site_ids = {s.site_id for s in shifts if s.site_id}
+        if site_ids:
+            res = await session.execute(select(Site).where(Site.id.in_(site_ids)))
+            sites_dict = {s.id: s for s in res.scalars().all()}
+        else:
+            sites_dict = {}
+
+        buffer = export_crew_xlsx(
+            crew, members, shifts_by_user, sites_dict, tz, period,
+        )
+        crew_name = crew.name
+
+    safe_crew = re.sub(r"[^\w-]+", "_", crew_name)
+    filename = f"crew_{safe_crew}_{period}.xlsx"
+    doc = BufferedInputFile(buffer.read(), filename=filename)
+    await message.answer_document(doc, caption=t("export_ready", period=period))
 
 
 # --- WORKER ---

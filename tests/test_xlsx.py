@@ -1,11 +1,12 @@
 """Tests for XLSX exporter."""
 
+from datetime import datetime
 from decimal import Decimal
 from typing import Any
 from zoneinfo import ZoneInfo
 
 from openpyxl import load_workbook
-from src.exporters.xlsx import build_shift_rows, export_xlsx
+from src.exporters.xlsx import build_shift_rows, export_crew_xlsx, export_xlsx
 
 from tests.conftest import FakeShift, FakeSite, FakeUser
 
@@ -97,3 +98,46 @@ class TestExportXlsx:
         wb = load_workbook(buffer)
         ws = wb["Shifts"]
         assert ws.max_row == 1  # Only header
+
+
+class TestExportCrewXlsx:
+    def test_summary_and_per_member_sheets(self, tz_warsaw: ZoneInfo) -> None:
+        crew = type("FakeCrew", (), {"id": 1, "name": "Бригада А"})()
+
+        m1 = FakeUser(id=10, name="Иван")
+        m2 = FakeUser(id=20, name="Петр")
+        m1.hourly_rate = Decimal("50.00")  # type: ignore[misc]
+        m2.hourly_rate = Decimal("60.00")  # type: ignore[misc]
+
+        s1 = FakeShift(
+            id=1, user_id=10, site_id=None,
+            start_at=datetime(2026, 5, 8, 8, 0, tzinfo=tz_warsaw),
+            end_at=datetime(2026, 5, 8, 16, 0, tzinfo=tz_warsaw),
+        )
+        s2 = FakeShift(
+            id=2, user_id=20, site_id=None,
+            start_at=datetime(2026, 5, 8, 9, 0, tzinfo=tz_warsaw),
+            end_at=datetime(2026, 5, 8, 13, 0, tzinfo=tz_warsaw),
+        )
+
+        buffer = export_crew_xlsx(
+            crew,  # type: ignore[arg-type]
+            [m1, m2],  # type: ignore[list-item]
+            {10: [s1], 20: [s2]},  # type: ignore[dict-item]
+            {},
+            tz_warsaw,
+            "2026-05",
+        )
+        wb = load_workbook(buffer)
+        assert "Crew summary" in wb.sheetnames
+        assert "Иван" in wb.sheetnames
+        assert "Петр" in wb.sheetnames
+
+        sumsheet = wb["Crew summary"]
+        member_rows = [
+            sumsheet.cell(row=r, column=1).value
+            for r in range(4, sumsheet.max_row + 1)
+        ]
+        assert "Иван" in member_rows
+        assert "Петр" in member_rows
+        assert "Grand total" in member_rows
