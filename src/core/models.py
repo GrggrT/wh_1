@@ -19,10 +19,50 @@ class User(Base):
     name: Mapped[str] = mapped_column(Text, nullable=False)
     locale: Mapped[str] = mapped_column(Text, nullable=False, server_default="ru")
     hourly_rate: Mapped[Decimal | None] = mapped_column(Numeric(10, 2))
+    role: Mapped[str] = mapped_column(Text, nullable=False, server_default="worker")
+    crew_id: Mapped[int | None] = mapped_column(
+        BigInteger, ForeignKey("crews.id", ondelete="SET NULL"),
+    )
     created_at: Mapped[datetime] = mapped_column(nullable=False, server_default=func.now())
 
     sites: Mapped[list["Site"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     shifts: Mapped[list["Shift"]] = relationship(back_populates="user")
+    crew: Mapped["Crew | None"] = relationship(
+        back_populates="members", foreign_keys=[crew_id],
+    )
+
+
+class Crew(Base):
+    __tablename__ = "crews"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    foreman_user_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("users.id", ondelete="CASCADE"), nullable=False,
+    )
+    name: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(nullable=False, server_default=func.now())
+
+    members: Mapped[list["User"]] = relationship(
+        back_populates="crew", foreign_keys="User.crew_id",
+    )
+
+
+class InviteCode(Base):
+    __tablename__ = "invite_codes"
+
+    code: Mapped[str] = mapped_column(Text, primary_key=True)
+    crew_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("crews.id", ondelete="CASCADE"), nullable=False,
+    )
+    created_by_user_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("users.id", ondelete="CASCADE"), nullable=False,
+    )
+    expires_at: Mapped[datetime] = mapped_column(nullable=False)
+    used_at: Mapped[datetime | None] = mapped_column()
+    used_by_user_id: Mapped[int | None] = mapped_column(
+        BigInteger, ForeignKey("users.id", ondelete="SET NULL"),
+    )
+    created_at: Mapped[datetime] = mapped_column(nullable=False, server_default=func.now())
 
 
 class Site(Base):

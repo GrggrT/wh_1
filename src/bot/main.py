@@ -10,16 +10,22 @@ from aiogram import BaseMiddleware, Bot, Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.types import Message, TelegramObject
 
-from src.bot.handlers import common, exports, reports, shifts
+from src.bot.handlers import common, crew_admin, exports, reports, shifts
 from src.bot.scheduler_runner import run_scheduler
-from src.bot.strings import t
 from src.core.config import get_settings
-from src.core.db import dispose_engine, init_engine
+from src.core.db import dispose_engine, get_session, init_engine
+from src.services.crews import ROLE_OWNER, ensure_owner_role
+from src.services.shifts import ensure_user
 
 logger = structlog.get_logger()
 
 
-class OwnerOnlyMiddleware(BaseMiddleware):
+class UserResolveMiddleware(BaseMiddleware):
+    """Resolve the DB user for each incoming Message and inject it into data.
+
+    Bootstraps the configured owner_tg_id as role='owner' on first contact.
+    """
+
     def __init__(self, owner_tg_id: int) -> None:
         self.owner_tg_id = owner_tg_id
 
@@ -29,13 +35,16 @@ class OwnerOnlyMiddleware(BaseMiddleware):
         event: TelegramObject,
         data: dict[str, Any],
     ) -> Any:  # noqa: ANN401
-        if (
-            isinstance(event, Message)
-            and event.from_user
-            and event.from_user.id != self.owner_tg_id
-        ):
-            await event.answer(t("private_bot"))
-            return None
+        if not isinstance(event, Message) or event.from_user is None:
+            return await handler(event, data)
+        async for session in get_session():
+            user = await ensure_user(
+                session, event.from_user.id, event.from_user.full_name,
+            )
+            if event.from_user.id == self.owner_tg_id and user.role != ROLE_OWNER:
+                await ensure_owner_role(session, self.owner_tg_id)
+            await session.commit()
+        data["db_user"] = user
         return await handler(event, data)
 
 
@@ -55,9 +64,10 @@ async def main() -> None:
     storage = MemoryStorage()
     dp = Dispatcher(storage=storage)
 
-    dp.message.middleware(OwnerOnlyMiddleware(settings.owner_tg_id))
+    dp.message.middleware(UserResolveMiddleware(settings.owner_tg_id))
 
     dp.include_router(common.router)
+    dp.include_router(crew_admin.router)
     dp.include_router(shifts.router)
     dp.include_router(reports.router)
     dp.include_router(exports.router)
