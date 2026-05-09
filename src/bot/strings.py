@@ -18,6 +18,7 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
             "/crew — состав бригады (для бригадира)\n"
             "/add_foreman <tg_id> [название] — назначить бригадира (владелец)\n"
             "/foremen — список бригадиров (владелец)\n"
+            "/crew_today /crew_week /crew_month — отчёты по бригаде\n"
             "/cancel — отмена текущего действия"
         ),
         "private_bot": "Это приватный бот.",
@@ -81,6 +82,18 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
         "join_usage": "Используй: /join <код>",
         "invite_error": "Не получилось присоединиться: {reason}.",
         "joined_crew": "Ты в бригаде «{crew}». Удачной смены!",
+        "crew_no_shifts_today": "По бригаде сегодня смен нет.",
+        "crew_no_shifts_week": "По бригаде на этой неделе смен нет.",
+        "crew_no_shifts_month": "По бригаде в этом месяце смен нет.",
+        "crew_today_summary": (
+            "Бригада сегодня:\n{body}\n\nИтого: {total_hours} ч ({total_count})"
+        ),
+        "crew_week_summary": (
+            "Бригада за неделю:\n{body}\n\nИтого: {total_hours} ч ({total_count})"
+        ),
+        "crew_month_summary": (
+            "Бригада за месяц:\n{body}\n\nИтого: {total_hours} ч ({total_count})"
+        ),
     },
 }
 

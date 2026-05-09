@@ -78,6 +78,33 @@ class TestSplitShiftAtMidnight:
         assert len(segments) == 3
 
 
+class TestCrewAggregation:
+    def test_per_user_split(self) -> None:
+        """compute_period_hours called per-user yields independent totals."""
+        tz = ZoneInfo("Europe/Warsaw")
+        u1 = FakeShift(
+            id=1, user_id=10, site_id=None,
+            start_at=datetime(2026, 5, 8, 8, 0, tzinfo=tz),
+            end_at=datetime(2026, 5, 8, 16, 0, tzinfo=tz),
+        )
+        u2_a = FakeShift(
+            id=2, user_id=20, site_id=None,
+            start_at=datetime(2026, 5, 8, 9, 0, tzinfo=tz),
+            end_at=datetime(2026, 5, 8, 13, 0, tzinfo=tz),
+        )
+        u2_b = FakeShift(
+            id=3, user_id=20, site_id=None,
+            start_at=datetime(2026, 5, 8, 14, 0, tzinfo=tz),
+            end_at=datetime(2026, 5, 8, 17, 0, tzinfo=tz),
+        )
+        d = date(2026, 5, 8)
+        u1_hours = compute_period_hours([u1], d, d, tz)  # type: ignore[arg-type]
+        u2_hours = compute_period_hours([u2_a, u2_b], d, d, tz)  # type: ignore[arg-type]
+        assert u1_hours == Decimal("8.00")
+        assert u2_hours == Decimal("7.00")
+        assert (u1_hours + u2_hours) == Decimal("15.00")
+
+
 class TestComputePeriodHours:
     def test_timezone_correctness(self) -> None:
         """Spec check #3: shift crossing midnight, each day gets correct portion."""

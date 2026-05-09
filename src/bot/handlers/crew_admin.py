@@ -1,12 +1,17 @@
 """Owner and foreman commands: manage foremen, crews, and invite codes."""
 
+from datetime import date, timedelta
+from decimal import Decimal
+from zoneinfo import ZoneInfo
+
 from aiogram import Router
 from aiogram.filters import Command, CommandObject
 from aiogram.types import Message
 
 from src.bot.strings import t
+from src.core.config import get_settings
 from src.core.db import get_session
-from src.core.models import User
+from src.core.models import Shift, User
 from src.services.crews import (
     ROLE_FOREMAN,
     ROLE_OWNER,
@@ -18,6 +23,10 @@ from src.services.crews import (
     list_foremen,
     promote_to_foreman,
     redeem_invite_code,
+)
+from src.services.reports import (
+    compute_period_hours,
+    get_shifts_for_users_in_period,
 )
 
 router = Router()
@@ -106,6 +115,93 @@ async def cmd_crew(message: Message, db_user: User | None = None) -> None:
         return
     lines = [f"• {m.name}" for m in members]
     await message.answer(t("crew_list", crew=crew_name, body="\n".join(lines)))
+
+
+# --- FOREMAN REPORTS ---
+
+
+async def _crew_period_summary(
+    message: Message,
+    db_user: User | None,
+    start_date: date,
+    end_date: date,
+    empty_key: str,
+    summary_key: str,
+) -> None:
+    if db_user is None or db_user.role not in (ROLE_FOREMAN, ROLE_OWNER):
+        await message.answer(t("not_authorized"))
+        return
+    settings = get_settings()
+    tz = ZoneInfo(settings.timezone)
+    rows: list[tuple[str, Decimal, int]] = []
+    total_hours = Decimal(0)
+    total_count = 0
+    async for session in get_session():
+        crew = await get_crew_for_foreman(session, db_user.id)
+        if crew is None:
+            await message.answer(t("no_crew"))
+            return
+        members = await list_crew_members(session, crew.id)
+        if not members:
+            await message.answer(t(empty_key))
+            return
+        member_ids = [m.id for m in members]
+        shifts = await get_shifts_for_users_in_period(
+            session, member_ids, start_date, end_date, tz,
+        )
+        by_user: dict[int, list[Shift]] = {m.id: [] for m in members}
+        for shift in shifts:
+            if shift.end_at is not None:
+                by_user[shift.user_id].append(shift)
+        for member in members:
+            user_shifts = by_user[member.id]
+            hours = compute_period_hours(user_shifts, start_date, end_date, tz)
+            count = len(user_shifts)
+            if count == 0 and hours == 0:
+                continue
+            rows.append((member.name, hours, count))
+            total_hours += hours
+            total_count += count
+    if not rows:
+        await message.answer(t(empty_key))
+        return
+    body_lines = [f"• {name}: {hrs} ч ({n})" for name, hrs, n in rows]
+    await message.answer(
+        t(
+            summary_key,
+            body="\n".join(body_lines),
+            total_hours=str(total_hours.quantize(Decimal('0.01'))),
+            total_count=str(total_count),
+        ),
+    )
+
+
+@router.message(Command("crew_today"))
+async def cmd_crew_today(message: Message, db_user: User | None = None) -> None:
+    today = date.today()
+    await _crew_period_summary(
+        message, db_user, today, today, "crew_no_shifts_today", "crew_today_summary",
+    )
+
+
+@router.message(Command("crew_week"))
+async def cmd_crew_week(message: Message, db_user: User | None = None) -> None:
+    today = date.today()
+    start_of_week = today - timedelta(days=today.weekday())
+    await _crew_period_summary(
+        message, db_user, start_of_week, today,
+        "crew_no_shifts_week", "crew_week_summary",
+    )
+
+
+@router.message(Command("crew_month"))
+async def cmd_crew_month(message: Message, db_user: User | None = None) -> None:
+    today = date.today()
+    start_of_month = today.replace(day=1)
+    await _crew_period_summary(
+        message, db_user, start_of_month, today,
+        "crew_no_shifts_month", "crew_month_summary",
+    )
 
 
 # --- WORKER ---

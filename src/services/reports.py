@@ -75,6 +75,31 @@ def compute_period_hours(
     return total.quantize(Decimal("0.01"))
 
 
+async def get_shifts_for_users_in_period(
+    session: AsyncSession,
+    user_ids: list[int],
+    start_date: date,
+    end_date: date,
+    tz: ZoneInfo,
+) -> list[Shift]:
+    """Get shifts for a set of users overlapping the given local date range."""
+    if not user_ids:
+        return []
+    period_start = datetime.combine(start_date, time.min, tzinfo=tz)
+    period_end = datetime.combine(end_date + timedelta(days=1), time.min, tzinfo=tz)
+    stmt = (
+        select(Shift)
+        .where(
+            Shift.user_id.in_(user_ids),
+            Shift.start_at < period_end,
+            (Shift.end_at > period_start) | (Shift.end_at.is_(None)),
+        )
+        .order_by(Shift.user_id, Shift.start_at)
+    )
+    result = await session.execute(stmt)
+    return list(result.scalars().all())
+
+
 async def get_site_for_shift(session: AsyncSession, site_id: int | None) -> Site | None:
     if site_id is None:
         return None
