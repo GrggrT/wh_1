@@ -2,7 +2,7 @@
 nixPkgs = ["python312", "python312Packages.pip", "gcc"]
 
 [phases.install]
-cmds = ["pip install --upgrade pip", "pip install -e ."]
+cmds = ["pip install --break-system-packages -e ."]
 
 [start]
 cmd = "alembic upgrade head && python -m src.bot.main"
