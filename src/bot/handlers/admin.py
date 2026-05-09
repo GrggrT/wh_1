@@ -16,6 +16,7 @@ from src.services.crews import (
     ROLE_OWNER,
     get_crew_for_foreman,
     list_crew_members,
+    set_crew_default_rate,
 )
 
 router = Router()
@@ -211,6 +212,35 @@ async def cmd_archive_site(
         site_name = site.name
         await session.commit()
     await message.answer(t("site_archived", name=site_name))
+
+
+@router.message(Command("set_crew_rate"))
+async def cmd_set_crew_rate(
+    message: Message, command: CommandObject, db_user: User | None = None,
+) -> None:
+    """Foreman/owner: set the crew default hourly rate for new joiners."""
+    if db_user is None or db_user.role not in (ROLE_OWNER, ROLE_FOREMAN):
+        await message.answer(t("not_authorized"))
+        return
+    if not command.args:
+        await message.answer(t("set_crew_rate_usage"))
+        return
+    rate = _parse_rate(command.args.strip())
+    if rate is None:
+        await message.answer(t("rate_invalid"))
+        return
+    crew_name = ""
+    async for session in get_session():
+        crew = await get_crew_for_foreman(session, db_user.id)
+        if crew is None:
+            await message.answer(t("no_crew"))
+            return
+        await set_crew_default_rate(session, crew, rate)
+        crew_name = crew.name
+        await session.commit()
+    await message.answer(
+        t("crew_rate_set", crew=crew_name, rate=str(rate)),
+    )
 
 
 @router.message(Command("crew_rates"))

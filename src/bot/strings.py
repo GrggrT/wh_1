@@ -24,6 +24,7 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
             "/crew_rates — ставки бригады\n"
             "/sites — список объектов\n"
             "/set_rate <tg_id> <ставка> — ставка работника\n"
+            "/set_crew_rate <ставка> — дефолтная ставка для бригады\n"
             "/set_site_rate <site_id> <ставка> — ставка объекта\n"
             "/archive_site <site_id> — архивировать объект\n"
             "/whoami — кто я / /my_rate — моя ставка\n"
@@ -176,6 +177,11 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
         "audit_usage": "Используй: /audit <shift_id>",
         "audit_empty": "По смене #{id} истории изменений нет.",
         "audit_list": "История смены #{id}:\n{body}",
+        "set_crew_rate_usage": "Используй: /set_crew_rate <ставка>",
+        "crew_rate_set": (
+            "Ставка по умолчанию для бригады «{crew}»: {rate} zł/ч. "
+            "Применяется к новым работникам без своей ставки."
+        ),
     },
 }
 

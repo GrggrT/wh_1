@@ -40,6 +40,7 @@ class Crew(Base):
         BigInteger, ForeignKey("users.id", ondelete="CASCADE"), nullable=False,
     )
     name: Mapped[str] = mapped_column(Text, nullable=False)
+    default_hourly_rate: Mapped[Decimal | None] = mapped_column(Numeric(10, 2))
     created_at: Mapped[datetime] = mapped_column(nullable=False, server_default=func.now())
 
     members: Mapped[list["User"]] = relationship(

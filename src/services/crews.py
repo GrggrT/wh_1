@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import secrets
 from datetime import datetime, timedelta
+from decimal import Decimal
 from zoneinfo import ZoneInfo
 
 from sqlalchemy import select
@@ -136,5 +137,16 @@ async def redeem_invite_code(
         pass
     elif user.role != ROLE_FOREMAN:
         user.role = ROLE_WORKER
+    # Apply crew default rate to a joiner who has none of their own.
+    if user.hourly_rate is None and crew.default_hourly_rate is not None:
+        user.hourly_rate = crew.default_hourly_rate
+    await session.flush()
+    return crew
+
+
+async def set_crew_default_rate(
+    session: AsyncSession, crew: Crew, rate: Decimal,
+) -> Crew:
+    crew.default_hourly_rate = rate
     await session.flush()
     return crew

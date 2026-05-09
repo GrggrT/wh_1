@@ -80,6 +80,7 @@ _BOT_COMMANDS: list[BotCommand] = [
     BotCommand(command="crew_open", description="Кто сейчас на смене (бригадир)"),
     BotCommand(command="crew_rates", description="Ставки бригады (бригадир)"),
     BotCommand(command="set_rate", description="Установить ставку: /set_rate <tg_id> <ставка>"),
+    BotCommand(command="set_crew_rate", description="Ставка бригады по умолчанию"),
     BotCommand(command="my_rate", description="Моя ставка"),
     BotCommand(command="break_start", description="Начать перерыв"),
     BotCommand(command="break_stop", description="Завершить перерыв"),
