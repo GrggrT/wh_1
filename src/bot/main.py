@@ -11,7 +11,15 @@ from aiogram.exceptions import TelegramAPIError
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.types import BotCommand, Message, TelegramObject
 
-from src.bot.handlers import common, crew_admin, exports, reports, shifts, system
+from src.bot.handlers import (
+    admin,
+    common,
+    crew_admin,
+    exports,
+    reports,
+    shifts,
+    system,
+)
 from src.bot.scheduler_runner import run_scheduler
 from src.bot.strings import t
 from src.core.config import Settings, get_settings
@@ -67,6 +75,12 @@ _BOT_COMMANDS: list[BotCommand] = [
     BotCommand(command="add_foreman", description="Назначить бригадира (владелец)"),
     BotCommand(command="foremen", description="Список бригадиров (владелец)"),
     BotCommand(command="crew_open", description="Кто сейчас на смене (бригадир)"),
+    BotCommand(command="crew_rates", description="Ставки бригады (бригадир)"),
+    BotCommand(command="set_rate", description="Установить ставку: /set_rate <tg_id> <ставка>"),
+    BotCommand(command="my_rate", description="Моя ставка"),
+    BotCommand(command="sites", description="Список объектов"),
+    BotCommand(command="set_site_rate", description="Ставка объекта: /set_site_rate <id> <ставка>"),
+    BotCommand(command="archive_site", description="Архивировать объект: /archive_site <id>"),
     BotCommand(command="whoami", description="Кто я и в какой бригаде"),
     BotCommand(command="status", description="Статус бота (владелец)"),
     BotCommand(command="cancel", description="Отмена текущего действия"),
@@ -132,6 +146,7 @@ async def main() -> None:
 
     dp.include_router(common.router)
     dp.include_router(system.router)
+    dp.include_router(admin.router)
     dp.include_router(crew_admin.router)
     dp.include_router(shifts.router)
     dp.include_router(reports.router)

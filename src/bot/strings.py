@@ -20,6 +20,13 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
             "/foremen — список бригадиров (владелец)\n"
             "/crew_today /crew_week /crew_month — отчёты по бригаде\n"
             "/crew_export YYYY-MM — Excel по бригаде\n"
+            "/crew_open — кто сейчас на смене\n"
+            "/crew_rates — ставки бригады\n"
+            "/sites — список объектов\n"
+            "/set_rate <tg_id> <ставка> — ставка работника\n"
+            "/set_site_rate <site_id> <ставка> — ставка объекта\n"
+            "/archive_site <site_id> — архивировать объект\n"
+            "/whoami — кто я / /my_rate — моя ставка\n"
             "/cancel — отмена текущего действия"
         ),
         "private_bot": "Это приватный бот.",
@@ -121,6 +128,19 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
         "owner_error_alert": (
             "\u26a0 Ошибка в обработчике:\n<code>{error}</code>\n\nUpdate id: {update_id}"
         ),
+        "set_rate_usage": "Используй: /set_rate <tg_id> <ставка>",
+        "rate_invalid": "Ставка должна быть неотрицательным числом.",
+        "rate_set": "Ставка для {name} установлена: {rate} zł/ч.",
+        "rate_not_set": "У тебя не задана ставка. Попроси бригадира — /set_rate.",
+        "my_rate": "Твоя ставка: {rate} zł/ч.",
+        "sites_empty": "Объектов пока нет. Создай первый при старте смены.",
+        "sites_list": "Объекты:\n{body}",
+        "site_not_found": "Объект не найден или не принадлежит тебе.",
+        "set_site_rate_usage": "Используй: /set_site_rate <site_id> <ставка>",
+        "site_rate_set": "Ставка для «{name}» установлена: {rate} zł/ч.",
+        "archive_site_usage": "Используй: /archive_site <site_id>",
+        "site_archived": "Объект «{name}» переведён в архив.",
+        "crew_rates_list": "Ставки в бригаде «{crew}»:\n{body}",
     },
 }
 
