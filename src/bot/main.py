@@ -1,6 +1,7 @@
 """Bot entry point — dispatcher setup, long polling."""
 
 import asyncio
+import contextlib
 from collections.abc import Awaitable, Callable
 from typing import Any
 
@@ -10,6 +11,7 @@ from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.types import Message, TelegramObject
 
 from src.bot.handlers import common, exports, reports, shifts
+from src.bot.scheduler_runner import run_scheduler
 from src.bot.strings import t
 from src.core.config import get_settings
 from src.core.db import dispose_engine, init_engine
@@ -62,9 +64,13 @@ async def main() -> None:
 
     logger.info("bot_starting", owner_tg_id=settings.owner_tg_id)
 
+    scheduler_task = asyncio.create_task(run_scheduler(bot, settings))
     try:
         await dp.start_polling(bot)
     finally:
+        scheduler_task.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await scheduler_task
         await dispose_engine()
         await bot.session.close()
 

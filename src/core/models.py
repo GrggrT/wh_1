@@ -2,7 +2,7 @@ from datetime import datetime
 from decimal import Decimal
 
 from geoalchemy2 import Geography
-from sqlalchemy import BigInteger, ForeignKey, Numeric, Text, func
+from sqlalchemy import BigInteger, Boolean, ForeignKey, Numeric, Text, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
@@ -56,6 +56,10 @@ class Shift(Base):
     end_photo_file_id: Mapped[str | None] = mapped_column(Text)
     note: Mapped[str | None] = mapped_column(Text)
     work_type: Mapped[str | None] = mapped_column(Text)
+    auto_closed: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default="false",
+    )
+    reminder_sent_at: Mapped[datetime | None] = mapped_column()
     created_at: Mapped[datetime] = mapped_column(nullable=False, server_default=func.now())
 
     user: Mapped["User"] = relationship(back_populates="shifts")

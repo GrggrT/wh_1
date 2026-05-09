@@ -51,6 +51,8 @@ class FakeShift:
     end_photo_file_id: str | None = None
     note: str | None = None
     work_type: str | None = None
+    auto_closed: bool = False
+    reminder_sent_at: datetime | None = None
     created_at: datetime = field(default_factory=_utc_default)
 
 
