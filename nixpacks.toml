@@ -1,5 +1,5 @@
 [phases.setup]
-nixPkgs = ["python312", "gcc"]
+nixPkgs = ["python312", "python312Packages.pip", "gcc"]
 
 [phases.install]
 cmds = ["pip install --upgrade pip", "pip install -e ."]
