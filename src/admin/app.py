@@ -157,7 +157,7 @@ def create_app(
             "chart_labels": chart_labels,
             "chart_values": chart_values,
         }
-        return templates.TemplateResponse("dashboard.html", ctx)
+        return templates.TemplateResponse(request, "dashboard.html", ctx)
 
     @app.get("/calendar", response_class=HTMLResponse)
     async def calendar_view(
@@ -246,6 +246,7 @@ def create_app(
         )
 
         return templates.TemplateResponse(
+            request,
             "calendar.html",
             {
                 "request": request,
@@ -291,6 +292,7 @@ def create_app(
             for u in rows
         ]
         return templates.TemplateResponse(
+            request,
             "users.html",
             {"request": request, "title": "Работники", "users": users_view},
         )
@@ -325,6 +327,7 @@ def create_app(
             for s in rows
         ]
         return templates.TemplateResponse(
+            request,
             "sites.html",
             {"request": request, "title": "Объекты", "sites": sites_view},
         )
@@ -411,6 +414,7 @@ def create_app(
             for s in all_sites
         ]
         return templates.TemplateResponse(
+            request,
             "shifts.html",
             {
                 "request": request,
@@ -473,6 +477,7 @@ def create_app(
             for r in rows
         ]
         return templates.TemplateResponse(
+            request,
             "audit.html",
             {
                 "request": request,
