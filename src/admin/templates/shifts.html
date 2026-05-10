@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block content %}
+<form method="get" action="/shifts" style="margin-bottom:12px; display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+  <label>Дней: <input type="number" name="days" min="1" max="90" value="{{ days }}" style="width:70px"></label>
+  <label>Работник: <input type="text" name="q" value="{{ q }}" placeholder="имя или часть" style="padding:4px 8px;border:1px solid #d1d5db;border-radius:4px;"></label>
+  <label>Объект:
+    <select name="site" style="padding:4px 8px;border:1px solid #d1d5db;border-radius:4px;">
+      <option value="">— все —</option>
+      {% for s in site_options %}
+        <option value="{{ s.id }}"{% if s.selected %} selected{% endif %}>{{ s.name }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <button type="submit">Показать</button>
+  <a href="/shifts" style="color:#6b7280;font-size:13px;">сбросить</a>
+</form>
+<table>
+  <thead><tr><th>id</th><th>Работник</th><th>Объект</th><th>Начало</th><th>Конец</th><th>Часы (нетто)</th><th>Авто</th></tr></thead>
+  <tbody>
+  {% for s in shifts %}
+    <tr><td>{{ s.id }}</td><td>{{ s.user }}</td><td>{{ s.site }}</td><td>{{ s.start }}</td><td>{{ s.end }}</td><td>{{ s.hours }}</td><td>{{ s.auto }}</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+<p style="color:#6b7280;font-size:12px;margin-top:8px;">Показано: {{ shifts|length }} строк (макс 500).</p>
+{% endblock %}

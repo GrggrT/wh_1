@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+  .cal-nav { display: flex; gap: 12px; align-items: center; margin-bottom: 12px; }
+  .cal-nav a { padding: 6px 10px; border: 1px solid #d1d5db; border-radius: 4px; background: #fff; color: #1f2937; text-decoration: none; }
+  .cal-nav a:hover { background: #f3f4f6; }
+  .cal-nav .label { font-weight: 600; }
+  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; background: #e5e7eb; padding: 6px; border-radius: 8px; }
+  .cal-head { background: #f3f4f6; font-weight: 600; text-align: center; padding: 6px; border-radius: 4px; font-size: 13px; color: #6b7280; }
+  .cal-cell { background: #fff; padding: 8px; min-height: 72px; border-radius: 4px; position: relative; }
+  .cal-cell.empty { background: transparent; }
+  .cal-cell.today { outline: 2px solid #2563eb; }
+  .cal-cell .day { font-weight: 600; font-size: 13px; color: #374151; }
+  .cal-cell .hours { font-size: 18px; font-weight: 700; color: #111827; margin-top: 6px; }
+  .cal-cell .count { font-size: 11px; color: #6b7280; }
+  .cal-cell.empty .day, .cal-cell.empty .hours, .cal-cell.empty .count { display: none; }
+</style>
+<div class="cal-nav">
+  <a href="/calendar?month={{ prev_month }}">◀ предыдущий</a>
+  <span class="label">{{ month_label }}</span>
+  <a href="/calendar?month={{ next_month }}">следующий ▶</a>
+  <a href="/calendar" style="margin-left:auto;">текущий месяц</a>
+</div>
+<div class="cal-grid">
+  <div class="cal-head">Пн</div>
+  <div class="cal-head">Вт</div>
+  <div class="cal-head">Ср</div>
+  <div class="cal-head">Чт</div>
+  <div class="cal-head">Пт</div>
+  <div class="cal-head">Сб</div>
+  <div class="cal-head">Вс</div>
+  {% for c in cells %}
+    {% if c.empty %}
+      <div class="cal-cell empty"></div>
+    {% else %}
+      <div class="cal-cell{% if c.today %} today{% endif %}">
+        <div class="day">{{ c.day }}</div>
+        <div class="hours">{{ c.hours }}</div>
+        <div class="count">смен: {{ c.count }}</div>
+      </div>
+    {% endif %}
+  {% endfor %}
+</div>
+{% endblock %}

@@ -1,6 +1,6 @@
 """Geofence (point-in-polygon) checks using PostGIS."""
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.models import Site
@@ -32,3 +32,35 @@ async def check_point_in_site(
     check_result = await session.execute(check_stmt)
     result_val: bool | None = check_result.scalar_one_or_none()
     return result_val
+
+
+def build_polygon_wkt(points: list[tuple[float, float]]) -> str:
+    """Build a closed POLYGON WKT (lon lat) from at least 3 points.
+
+    Auto-closes the ring by appending the first point if not already closed.
+    """
+    if len(points) < 3:
+        raise ValueError("polygon requires at least 3 points")
+    ring = list(points)
+    if ring[0] != ring[-1]:
+        ring.append(ring[0])
+    coords = ", ".join(f"{lon} {lat}" for lon, lat in ring)
+    return f"SRID=4326;POLYGON(({coords}))"
+
+
+async def set_site_polygon(
+    session: AsyncSession, site_id: int, points: list[tuple[float, float]],
+) -> None:
+    """Persist a polygon geometry for the given site from a list of (lon, lat)."""
+    wkt = build_polygon_wkt(points)
+    await session.execute(
+        update(Site)
+        .where(Site.id == site_id)
+        .values(polygon=func.ST_GeogFromText(wkt)),
+    )
+
+
+async def clear_site_polygon(session: AsyncSession, site_id: int) -> None:
+    await session.execute(
+        update(Site).where(Site.id == site_id).values(polygon=None),
+    )

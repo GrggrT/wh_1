@@ -117,6 +117,59 @@ async def get_shifts_for_users_in_period(
     return list(result.scalars().all())
 
 
+def compute_period_earnings(
+    shifts: list[Shift],
+    start_date: date,
+    end_date: date,
+    tz: ZoneInfo,
+    sites_by_id: dict[int, Site],
+    user_rate: Decimal | None,
+    breaks_by_shift: dict[int, list[Break]] | None = None,
+) -> Decimal | None:
+    """Total earnings across closed shifts in the period.
+
+    Per shift, rate = (site.hourly_rate if site has a rate) else user_rate.
+    Returns None if no shift can be priced (no rate at all anywhere); otherwise
+    sums priced shifts only. Hours used per shift are net (clipped to window).
+    """
+    period_start = datetime.combine(start_date, time.min, tzinfo=tz)
+    period_end = datetime.combine(end_date + timedelta(days=1), time.min, tzinfo=tz)
+    total = Decimal(0)
+    any_priced = False
+    for shift in shifts:
+        if shift.end_at is None:
+            continue
+        effective_start = max(shift.start_at, period_start)
+        effective_end = min(shift.end_at, period_end)
+        if effective_end <= effective_start:
+            continue
+        gross = compute_hours(effective_start, effective_end)
+        break_h = Decimal(0)
+        if breaks_by_shift is not None:
+            shift_breaks = breaks_by_shift.get(shift.id, [])
+            if shift_breaks:
+                break_h = total_break_hours(
+                    shift_breaks, effective_start, effective_end,
+                )
+        net = gross - break_h
+        if net < 0:
+            net = Decimal(0)
+        rate: Decimal | None = None
+        if shift.site_id is not None:
+            site = sites_by_id.get(shift.site_id)
+            if site is not None and site.hourly_rate is not None:
+                rate = site.hourly_rate
+        if rate is None:
+            rate = user_rate
+        if rate is None:
+            continue
+        any_priced = True
+        total += net * rate
+    if not any_priced:
+        return None
+    return total.quantize(Decimal("0.01"))
+
+
 async def get_site_for_shift(session: AsyncSession, site_id: int | None) -> Site | None:
     if site_id is None:
         return None

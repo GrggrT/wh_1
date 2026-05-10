@@ -12,3 +12,7 @@ class ShiftStop(StatesGroup):
     confirming = State()
     awaiting_end_location = State()
     awaiting_end_photo = State()
+
+
+class GeofenceEdit(StatesGroup):
+    collecting_points = State()

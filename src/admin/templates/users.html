@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block content %}
+<table>
+  <thead><tr><th>id</th><th>Имя</th><th>tg_id</th><th>Роль</th><th>Бригада</th><th>Ставка zł/ч</th></tr></thead>
+  <tbody>
+  {% for u in users %}
+    <tr><td>{{ u.id }}</td><td>{{ u.name }}</td><td>{{ u.tg_id }}</td><td>{{ u.role }}</td><td>{{ u.crew }}</td><td>{{ u.rate }}</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

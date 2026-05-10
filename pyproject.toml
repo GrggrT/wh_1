@@ -13,6 +13,9 @@ dependencies = [
     "structlog>=24.1",
     "geoalchemy2>=0.15",
     "httpx>=0.27",
+    "fastapi>=0.115,<1",
+    "uvicorn>=0.34,<1",
+    "jinja2>=3.1,<4",
 ]
 
 [project.optional-dependencies]
@@ -32,6 +35,9 @@ src = ["src"]
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "N", "UP", "ANN", "B", "A", "COM", "C4", "T20", "RET", "SIM"]
 ignore = ["COM812"]
+
+[tool.ruff.lint.per-file-ignores]
+"src/admin/*.py" = ["B008"]  # FastAPI-style Depends() in defaults is idiomatic
 
 [tool.mypy]
 python_version = "3.12"

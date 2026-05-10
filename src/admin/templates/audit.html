@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block content %}
+<form method="get" action="/audit" style="margin-bottom:12px; display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+  <label>Записей: <input type="number" name="limit" min="1" max="500" value="{{ limit }}" style="width:80px"></label>
+  <label>Сущность:
+    <select name="entity" style="padding:4px 8px;border:1px solid #d1d5db;border-radius:4px;">
+      {% set kinds = ['', 'shift', 'break', 'site', 'user', 'crew'] %}
+      {% for k in kinds %}
+        <option value="{{ k }}"{% if entity == k %} selected{% endif %}>{{ k or '— все —' }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <label>Кто (tg_id): <input type="number" name="actor" value="{{ actor }}" style="width:120px"></label>
+  <button type="submit">Показать</button>
+  <a href="/audit" style="color:#6b7280;font-size:13px;">сбросить</a>
+</form>
+<table>
+  <thead><tr><th>id</th><th>Когда</th><th>Кто</th><th>Сущность</th><th>Действие</th><th>Diff</th></tr></thead>
+  <tbody>
+  {% for r in rows %}
+    <tr><td>{{ r.id }}</td><td>{{ r.when }}</td><td>{{ r.actor }}</td><td>{{ r.entity }}</td><td>{{ r.action }}</td><td><code style="font-size:11px">{{ r.diff }}</code></td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

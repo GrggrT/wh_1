@@ -8,16 +8,19 @@ from zoneinfo import ZoneInfo
 from aiogram import F, Router
 from aiogram.filters import Command, CommandObject
 from aiogram.types import BufferedInputFile, Message
+from sqlalchemy import select
 
 from src.bot.strings import t
 from src.core.config import get_settings
 from src.core.db import get_session
 from src.core.models import Shift, Site, User
 from src.exporters.xlsx import export_crew_xlsx
+from src.services.audit import write_audit
 from src.services.breaks import get_breaks_for_shifts
 from src.services.crews import (
     ROLE_FOREMAN,
     ROLE_OWNER,
+    ROLE_WORKER,
     CrewError,
     InviteError,
     get_crew_for_foreman,
@@ -26,11 +29,14 @@ from src.services.crews import (
     list_foremen,
     promote_to_foreman,
     redeem_invite_code,
+    transfer_user_to_crew,
 )
 from src.services.reports import (
+    compute_period_earnings,
     compute_period_hours,
     get_shifts_for_users_in_period,
 )
+from src.services.shifts import get_open_shift
 
 router = Router()
 
@@ -61,8 +67,53 @@ async def cmd_add_foreman(
         except CrewError:
             await message.answer(t("user_not_seen"))
             return
+        await write_audit(
+            session, db_user.id, "user", crew.foreman_user_id, "role_change",
+            {"role": {"before": "worker", "after": "foreman"}, "crew_id": crew.id},
+        )
         await session.commit()
     await message.answer(t("foreman_added", crew=crew.name))
+
+
+@router.message(Command("transfer_crew"))
+async def cmd_transfer_crew(
+    message: Message, command: CommandObject, db_user: User | None = None,
+) -> None:
+    """Owner: move a worker to another crew. Usage: /transfer_crew <tg_id> <crew_id>."""
+    if db_user is None or db_user.role != ROLE_OWNER:
+        await message.answer(t("not_authorized"))
+        return
+    if not command.args:
+        await message.answer(t("transfer_crew_usage"))
+        return
+    parts = command.args.split()
+    if len(parts) != 2:
+        await message.answer(t("transfer_crew_usage"))
+        return
+    try:
+        target_tg_id = int(parts[0])
+        crew_id = int(parts[1])
+    except ValueError:
+        await message.answer(t("transfer_crew_usage"))
+        return
+    user_name = ""
+    crew_name = ""
+    async for session in get_session():
+        try:
+            user, crew = await transfer_user_to_crew(session, target_tg_id, crew_id)
+        except CrewError as exc:
+            await message.answer(t("transfer_crew_error", reason=str(exc)))
+            return
+        user_name = user.name
+        crew_name = crew.name
+        await write_audit(
+            session, db_user.id, "user", user.id, "crew_change",
+            {"crew_id": {"after": crew.id}},
+        )
+        await session.commit()
+    await message.answer(
+        t("transfer_crew_done", name=user_name, crew=crew_name),
+    )
 
 
 @router.message(Command("foremen"))
@@ -105,6 +156,7 @@ async def cmd_crew(message: Message, db_user: User | None = None) -> None:
         await message.answer(t("not_authorized"))
         return
     crew_name: str | None = None
+    default_rate_str: str = "—"
     members: list[User] = []
     async for session in get_session():
         crew = await get_crew_for_foreman(session, db_user.id)
@@ -112,13 +164,77 @@ async def cmd_crew(message: Message, db_user: User | None = None) -> None:
             await message.answer(t("no_crew"))
             return
         crew_name = crew.name
+        if crew.default_hourly_rate is not None:
+            default_rate_str = f"{crew.default_hourly_rate} zł/ч"
         members = await list_crew_members(session, crew.id)
     assert crew_name is not None
     if not members:
         await message.answer(t("crew_empty", crew=crew_name))
         return
     lines = [f"• {m.name}" for m in members]
-    await message.answer(t("crew_list", crew=crew_name, body="\n".join(lines)))
+    await message.answer(
+        t(
+            "crew_list",
+            crew=crew_name,
+            count=str(len(members)),
+            default_rate=default_rate_str,
+            body="\n".join(lines),
+        ),
+    )
+
+
+@router.message(Command("remove_member"))
+async def cmd_remove_member(
+    message: Message, command: CommandObject, db_user: User | None = None,
+) -> None:
+    """Foreman/owner: detach a worker from a crew. Refuses if open shift."""
+    if db_user is None or db_user.role not in (ROLE_FOREMAN, ROLE_OWNER):
+        await message.answer(t("not_authorized"))
+        return
+    if not command.args:
+        await message.answer(t("remove_member_usage"))
+        return
+    try:
+        target_tg_id = int(command.args.strip())
+    except ValueError:
+        await message.answer(t("remove_member_usage"))
+        return
+    target_name = ""
+    async for session in get_session():
+        target = (
+            await session.execute(select(User).where(User.tg_id == target_tg_id))
+        ).scalar_one_or_none()
+        if target is None:
+            await message.answer(t("user_not_seen"))
+            return
+        if target.role != ROLE_WORKER:
+            await message.answer(t("remove_member_not_worker"))
+            return
+        if target.crew_id is None:
+            await message.answer(t("remove_member_not_in_crew"))
+            return
+        if db_user.role == ROLE_FOREMAN:
+            crew = await get_crew_for_foreman(session, db_user.id)
+            if crew is None or target.crew_id != crew.id:
+                await message.answer(t("not_authorized"))
+                return
+        open_shift = await get_open_shift(session, target.id)
+        if open_shift is not None:
+            await message.answer(t("remove_member_open_shift"))
+            return
+        old_crew_id = target.crew_id
+        target.crew_id = None
+        await write_audit(
+            session,
+            actor_id=db_user.id,
+            entity_type="user",
+            entity_id=target.id,
+            action="remove_member",
+            diff={"crew_id": {"before": old_crew_id, "after": None}},
+        )
+        target_name = target.name
+        await session.commit()
+    await message.answer(t("remove_member_done", name=target_name))
 
 
 # --- FOREMAN REPORTS ---
@@ -137,10 +253,14 @@ async def _crew_period_summary(
         return
     settings = get_settings()
     tz = ZoneInfo(settings.timezone)
-    rows: list[tuple[str, Decimal, int]] = []
+    rows: list[tuple[str, Decimal, int, Decimal | None]] = []
     total_hours = Decimal(0)
     total_count = 0
+    total_amount = Decimal(0)
+    any_amount = False
     async for session in get_session():
+        from sqlalchemy import select as _select
+
         crew = await get_crew_for_foreman(session, db_user.id)
         if crew is None:
             await message.answer(t("no_crew"))
@@ -156,6 +276,13 @@ async def _crew_period_summary(
         breaks_by_shift = await get_breaks_for_shifts(
             session, [s.id for s in shifts],
         )
+        site_ids = {s.site_id for s in shifts if s.site_id is not None}
+        sites_by_id: dict[int, Site] = {}
+        if site_ids:
+            sites_res = await session.execute(
+                _select(Site).where(Site.id.in_(site_ids)),
+            )
+            sites_by_id = {s.id: s for s in sites_res.scalars().all()}
         by_user: dict[int, list[Shift]] = {m.id: [] for m in members}
         for shift in shifts:
             if shift.end_at is not None:
@@ -165,24 +292,38 @@ async def _crew_period_summary(
             hours = compute_period_hours(
                 user_shifts, start_date, end_date, tz, breaks_by_shift,
             )
+            amount = compute_period_earnings(
+                user_shifts, start_date, end_date, tz,
+                sites_by_id, member.hourly_rate, breaks_by_shift,
+            )
             count = len(user_shifts)
             if count == 0 and hours == 0:
                 continue
-            rows.append((member.name, hours, count))
+            rows.append((member.name, hours, count, amount))
             total_hours += hours
             total_count += count
+            if amount is not None:
+                total_amount += amount
+                any_amount = True
     if not rows:
         await message.answer(t(empty_key))
         return
-    body_lines = [f"• {name}: {hrs} ч ({n})" for name, hrs, n in rows]
-    await message.answer(
-        t(
-            summary_key,
-            body="\n".join(body_lines),
-            total_hours=str(total_hours.quantize(Decimal('0.01'))),
-            total_count=str(total_count),
-        ),
-    )
+    body_lines: list[str] = []
+    for name, hrs, n, amount in rows:
+        if amount is None:
+            body_lines.append(f"• {name}: {hrs} ч ({n})")
+        else:
+            body_lines.append(f"• {name}: {hrs} ч ({n}), {amount} zł")
+    fmt_kwargs: dict[str, str] = {
+        "body": "\n".join(body_lines),
+        "total_hours": str(total_hours.quantize(Decimal('0.01'))),
+        "total_count": str(total_count),
+    }
+    if any_amount:
+        fmt_kwargs["total_amount"] = str(total_amount.quantize(Decimal('0.01')))
+        await message.answer(t(f"{summary_key}_amount", **fmt_kwargs))
+    else:
+        await message.answer(t(summary_key, **fmt_kwargs))
 
 
 @router.message(Command("crew_today"))

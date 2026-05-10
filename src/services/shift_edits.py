@@ -52,6 +52,24 @@ async def list_recent_shifts(
     return list((await session.execute(stmt)).scalars().all())
 
 
+async def list_recent_crew_shifts(
+    session: AsyncSession,
+    crew_id: int,
+    days: int = 14,
+    limit: int = 30,
+) -> list[Shift]:
+    """Recent shifts by all members of a crew (joined via User.crew_id)."""
+    cutoff = datetime.now(tz=ZoneInfo("UTC")) - timedelta(days=days)
+    stmt = (
+        select(Shift)
+        .join(User, User.id == Shift.user_id)
+        .where(User.crew_id == crew_id, Shift.start_at >= cutoff)
+        .order_by(Shift.start_at.desc())
+        .limit(limit)
+    )
+    return list((await session.execute(stmt)).scalars().all())
+
+
 async def get_shift(session: AsyncSession, shift_id: int) -> Shift | None:
     return (
         await session.execute(select(Shift).where(Shift.id == shift_id))

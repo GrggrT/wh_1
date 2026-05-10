@@ -10,38 +10,73 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
             "/start — начало работы\n"
             "/help — справка\n"
             "/today — смены за сегодня\n"
+            "/me_yesterday — мои смены за вчера\n"
+            "/quick_start — быстрый старт смены (последний объект)\n"
             "/week — смены за неделю\n"
             "/month — смены за месяц\n"
+            "/me YYYY-MM — мой произвольный месяц\n"
             "/export YYYY-MM — выгрузка в Excel\n"
             "/join <код> — присоединиться к бригаде\n"
             "/invite — выдать код (для бригадира)\n"
             "/crew — состав бригады (для бригадира)\n"
+            "/remove_member <tg_id> — вывести работника из бригады\n"
             "/add_foreman <tg_id> [название] — назначить бригадира (владелец)\n"
+            "/transfer_crew <tg_id> <crew_id> — перевести работника (владелец)\n"
             "/foremen — список бригадиров (владелец)\n"
             "/crew_today /crew_week /crew_month — отчёты по бригаде\n"
             "/crew_export YYYY-MM — Excel по бригаде\n"
             "/crew_open — кто сейчас на смене\n"
             "/crew_rates — ставки бригады\n"
             "/sites — список объектов\n"
+            "/site_info <id> — детали объекта (бригадир/владелец)\n"
+            "/sites_archive — архивные объекты (бригадир/владелец)\n"
             "/set_rate <tg_id> <ставка> — ставка работника\n"
             "/set_crew_rate <ставка> — дефолтная ставка для бригады\n"
             "/set_site_rate <site_id> <ставка> — ставка объекта\n"
             "/archive_site <site_id> — архивировать объект\n"
+            "/unarchive_site <site_id> — вернуть объект из архива\n"
+            "/rename_site <site_id> <название> — переименовать объект\n"
+            "/geofence_set <site_id> — задать границу объекта (точками)\n"
+            "/geofence_save — сохранить введённую границу\n"
+            "/geofence_cancel — отменить ввод границы\n"
+            "/geofence_clear <site_id> — удалить границу объекта\n"
             "/whoami — кто я / /my_rate — моя ставка\n"
-            "/break_start /break_stop — учёт перерыва внутри смены\n"
+            "/my_open — моя открытая смена\n"
+            "/leave_crew — выйти из бригады\n"
+            "/break_start /break_stop /break_status — учёт перерыва\n"
+            "/add_break <shift_id> <начало> <конец> — добавить перерыв (бригадир/владелец)\n"
+            "/edit_break <break_id> start|end <время> — изменить перерыв\n"
+            "/delete_break <break_id> — удалить перерыв\n"
             "/shifts — последние смены\n"
+            "/crew_shifts — последние смены бригады (бригадир)\n"
+            "/shift_info <id> — детали смены\n"
+            "/shift_photos <id> — фото смены\n"
             "/edit_shift <id> <поле> <значение> — изменить смену (бригадир/владелец)\n"
             "/delete_shift <id> — удалить смену (бригадир/владелец)\n"
+            "/restore_shift <audit_id> — восстановить удалённую смену (владелец)\n"
             "/note <текст> — заметка к открытой смене\n"
             "/work_type <тип> — тип работ для открытой смены\n"
             "/stop_for <tg_id> — закрыть смену работника (бригадир)\n"
             "/audit <id> — история изменений смены (бригадир)\n"
+            "/admin_audit [N] — журнал админ-действий (владелец)\n"
+            "/active — все открытые смены (владелец)\n"
+            "/stats — глобальная статистика (владелец)\n"
+            "/work_stats [YYYY-MM] — часы по типам работ за месяц (владелец)\n"
+            "/site_stats [YYYY-MM] — часы по объектам за месяц (владелец)\n"
+            "/digest — сводка дня (владелец)\n"
+            "/digest_week — сводка прошлой недели (владелец)\n"
+            "/digest_month [YYYY-MM] — сводка месяца (владелец)\n"
+            "/status — статус бота (владелец)\n"
             "/cancel — отмена текущего действия"
         ),
         "private_bot": "Это приватный бот.",
         "shift_already_open": (
             "У тебя уже открыта смена с {start_time} на {site}. Сначала закрой её."
         ),
+        "quick_start_no_history": (
+            "Нет прошлой смены с объектом. Используй «Начать смену»."
+        ),
+        "quick_start_using_site": "Беру объект «{site}». Отправь геолокацию.",
         "select_site": "Выбери объект:",
         "new_site": "Новый объект",
         "enter_site_name": "Введи название нового объекта:",
@@ -62,11 +97,18 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
         ),
         "cancelled": "Действие отменено.",
         "no_shifts_today": "Сегодня смен не было.",
+        "no_shifts_yesterday": "Вчера смен не было.",
+        "yesterday_summary": "Вчера: {hours} ч. ({count} смен)",
+        "yesterday_summary_amount": "Вчера: {hours} ч. ({count} смен), {amount} zł",
         "no_shifts_week": "На этой неделе смен не было.",
         "no_shifts_month": "В этом месяце смен не было.",
         "today_summary": "Сегодня: {hours} ч. ({count} смен)",
+        "today_summary_amount": "Сегодня: {hours} ч. ({count} смен), {amount} zł",
         "week_summary": "Неделя: {hours} ч. ({count} смен)",
+        "week_summary_amount": "Неделя: {hours} ч. ({count} смен), {amount} zł",
         "month_summary": "Месяц: {hours} ч. ({count} смен)",
+        "month_summary_amount": "Месяц: {hours} ч. ({count} смен), {amount} zł",
+        "me_usage": "Используй: /me YYYY-MM",
         "export_empty": "Нет данных за {period}.",
         "export_ready": "Выгрузка за {period} готова.",
         "start_shift_btn": "Начать смену",
@@ -89,6 +131,9 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
             "Пользователь не найден. Сначала он должен написать боту /start."
         ),
         "foreman_added": "Бригадир назначен. Бригада: «{crew}».",
+        "transfer_crew_usage": "Используй: /transfer_crew <tg_id> <crew_id>",
+        "transfer_crew_done": "Работник {name} переведён в бригаду «{crew}».",
+        "transfer_crew_error": "Не получилось перевести: {reason}.",
         "foremen_empty": "Бригадиров пока нет.",
         "foremen_list": "Бригадиры:\n{body}",
         "no_crew": "У тебя ещё нет бригады.",
@@ -97,7 +142,17 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
             "Действует 72 часа. Перешли работнику — он напишет боту: /join {code}"
         ),
         "crew_empty": "В бригаде «{crew}» пока никого.",
-        "crew_list": "Бригада «{crew}»:\n{body}",
+        "crew_list": (
+            "Бригада «{crew}» (участников: {count}, дефолтная ставка: {default_rate}):\n"
+            "{body}"
+        ),
+        "remove_member_usage": "Используй: /remove_member <tg_id>",
+        "remove_member_done": "Работник {name} выведён из бригады.",
+        "remove_member_not_in_crew": "Работник не состоит в бригаде.",
+        "remove_member_not_worker": "Удалять можно только работников.",
+        "remove_member_open_shift": (
+            "Сначала закрой текущую смену работника (/stop_for)."
+        ),
         "join_usage": "Используй: /join <код>",
         "invite_error": "Не получилось присоединиться: {reason}.",
         "joined_crew": "Ты в бригаде «{crew}». Удачной смены!",
@@ -107,11 +162,23 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
         "crew_today_summary": (
             "Бригада сегодня:\n{body}\n\nИтого: {total_hours} ч ({total_count})"
         ),
+        "crew_today_summary_amount": (
+            "Бригада сегодня:\n{body}\n\n"
+            "Итого: {total_hours} ч ({total_count}), {total_amount} zł"
+        ),
         "crew_week_summary": (
             "Бригада за неделю:\n{body}\n\nИтого: {total_hours} ч ({total_count})"
         ),
+        "crew_week_summary_amount": (
+            "Бригада за неделю:\n{body}\n\n"
+            "Итого: {total_hours} ч ({total_count}), {total_amount} zł"
+        ),
         "crew_month_summary": (
             "Бригада за месяц:\n{body}\n\nИтого: {total_hours} ч ({total_count})"
+        ),
+        "crew_month_summary_amount": (
+            "Бригада за месяц:\n{body}\n\n"
+            "Итого: {total_hours} ч ({total_count}), {total_amount} zł"
         ),
         "crew_export_usage": "Используй: /crew_export YYYY-MM",
         "whoami": (
@@ -128,6 +195,21 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
             "Запуск: {started}\n"
             "База данных: {db}"
         ),
+        "my_open_none": "Сейчас у тебя нет открытой смены.",
+        "my_open_body": (
+            "Открытая смена #{id}\n"
+            "Объект: {site}\n"
+            "Начало: {start}\n"
+            "Прошло: {hours} ч"
+        ),
+        "leave_crew_owner": "Владелец не может покинуть бригаду.",
+        "leave_crew_foreman": (
+            "Бригадир не может выйти из своей бригады. "
+            "Передай бригаду через владельца."
+        ),
+        "leave_crew_not_in": "Ты не состоишь в бригаде.",
+        "leave_crew_open_shift": "Сначала закрой текущую смену.",
+        "leave_crew_done": "Ты вышел из бригады.",
         "crew_open_none": "В бригаде «{crew}» сейчас никто не на смене.",
         "crew_open_summary": "Бригада «{crew}» сейчас на смене:\n{body}",
         "crew_open_row": "• {name} — «{site}», с {start} ({hours} ч)",
@@ -140,6 +222,11 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
         "set_rate_usage": "Используй: /set_rate <tg_id> <ставка>",
         "rate_invalid": "Ставка должна быть неотрицательным числом.",
         "rate_set": "Ставка для {name} установлена: {rate} zł/ч.",
+        "rate_changed_notify": "Твоя ставка обновлена: {rate} zł/ч.",
+        "crew_rate_changed_notify": (
+            "Ставка бригады по умолчанию обновлена: {rate} zł/ч. "
+            "Если у тебя нет личной ставки — теперь будет применяться эта."
+        ),
         "rate_not_set": "У тебя не задана ставка. Попроси бригадира — /set_rate.",
         "my_rate": "Твоя ставка: {rate} zł/ч.",
         "sites_empty": "Объектов пока нет. Создай первый при старте смены.",
@@ -147,13 +234,48 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
         "site_not_found": "Объект не найден или не принадлежит тебе.",
         "set_site_rate_usage": "Используй: /set_site_rate <site_id> <ставка>",
         "site_rate_set": "Ставка для «{name}» установлена: {rate} zł/ч.",
+        "unarchive_site_usage": "Используй: /unarchive_site <site_id>",
+        "site_unarchived": "Объект «{name}» снова активен.",
+        "rename_site_usage": "Используй: /rename_site <site_id> <новое название>",
+        "site_renamed": "Объект «{old}» переименован в «{new}».",
+        "site_info_usage": "Используй: /site_info <site_id>",
+        "site_info_body": (
+            "Объект #{id}\n"
+            "Название: {name}\n"
+            "Ставка: {rate}\n"
+            "Архив: {archived}\n"
+            "Граница: {polygon}\n"
+            "Смен за 30 дней: {shifts_30d}"
+        ),
+        "sites_archive_empty": "Архивных объектов нет.",
+        "sites_archive_list": "Архивные объекты:\n{body}",
+        "admin_audit_usage": "Используй: /admin_audit [N] (по умолчанию 20)",
+        "admin_audit_empty": "Журнал админ-действий пуст.",
+        "admin_audit_list": "Журнал админ-действий:\n{body}",
         "archive_site_usage": "Используй: /archive_site <site_id>",
         "site_archived": "Объект «{name}» переведён в архив.",
         "crew_rates_list": "Ставки в бригаде «{crew}»:\n{body}",
         "break_started": "Перерыв начат в {time}. Когда вернёшься — /break_stop.",
+        "break_status": "Перерыв с {start}, идёт уже {minutes} мин.",
+        "break_auto_closed": (
+            "Перерыв автоматически закрыт (превышен лимит). Длительность: {minutes} мин."
+        ),
         "break_stopped": "Перерыв окончен. Длительность: {minutes} мин.",
         "already_on_break": "Перерыв уже идёт. Закрой его командой /break_stop.",
         "no_open_break": "Сейчас нет активного перерыва.",
+        "add_break_usage": (
+            "Используй: /add_break <shift_id> <YYYY-MM-DD HH:MM> <YYYY-MM-DD HH:MM>"
+        ),
+        "add_break_done": "Перерыв #{id} добавлен ({minutes} мин).",
+        "edit_break_usage": (
+            "Используй: /edit_break <break_id> start|end <YYYY-MM-DD HH:MM>"
+        ),
+        "edit_break_invalid_field": "Недопустимое поле. Доступные: {fields}.",
+        "edit_break_done": "Перерыв #{id} обновлён ({field}).",
+        "delete_break_usage": "Используй: /delete_break <break_id>",
+        "delete_break_done": "Перерыв #{id} удалён.",
+        "break_not_found": "Перерыв не найден.",
+        "break_edit_invalid": "Не получилось обновить перерыв: {reason}.",
         "shifts_empty": "За последние 14 дней смен нет.",
         "shifts_list": "Последние смены:\n{body}",
         "edit_shift_usage": (
@@ -169,6 +291,12 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
         "shift_not_found": "Смена не найдена.",
         "note_usage": "Используй: /note <текст заметки>",
         "note_saved": "Заметка сохранена.",
+        "voice_disabled": "Голосовые заметки выключены (нет OPENAI_API_KEY).",
+        "voice_no_open_shift": "Сначала открой смену, затем отправь голосовую.",
+        "voice_failed": "Не удалось распознать голосовую. Попробуй ещё раз.",
+        "voice_saved": "Заметка сохранена: {text}",
+        "work_stats_usage": "Используй: /work_stats [YYYY-MM]",
+        "site_stats_usage": "Используй: /site_stats [YYYY-MM]",
         "work_type_usage": "Используй: /work_type <тип работ>",
         "work_type_saved": "Тип работ: {value}.",
         "stop_for_usage": "Используй: /stop_for <tg_id>",
@@ -182,6 +310,21 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
             "Ставка по умолчанию для бригады «{crew}»: {rate} zł/ч. "
             "Применяется к новым работникам без своей ставки."
         ),
+        "shift_info_usage": "Используй: /shift_info <id>",
+        "shift_info_body": (
+            "Смена #{id}\n"
+            "Работник: {user}\n"
+            "Объект: {site}\n"
+            "Начало: {start}\n"
+            "Конец: {end}\n"
+            "Часы (брутто/перерыв/нетто): {gross} / {break_h} / {net}\n"
+            "Перерывов: {breaks_count}\n"
+            "Заметка: {note}\n"
+            "Тип работ: {work_type}\n"
+            "Авто-закрытие: {auto}\n"
+            "Фото: {photos}\n"
+            "Записей в audit: {audit}"
+        ),
         "shift_photos_usage": "Используй: /shift_photos <id>",
         "shift_photos_missing": "У этой смены нет сохранённых фото.",
         "photo_start_caption": "Фото начала смены",
@@ -190,6 +333,22 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
         "restore_shift_not_found": "Запись об удалении не найдена.",
         "restore_shift_already_exists": "Смена с этим id уже есть в базе.",
         "restore_shift_done": "Смена #{id} восстановлена.",
+        "digest_month_usage": "Используй: /digest_month [YYYY-MM]",
+        "geofence_set_usage": "Используй: /geofence_set <site_id>",
+        "geofence_collecting": (
+            "Редактирую границу объекта «{site}». "
+            "Отправь геолокации точек по периметру (минимум 3). "
+            "Когда закончишь — /geofence_save. Отмена — /geofence_cancel."
+        ),
+        "geofence_point_added": "Точка #{n} добавлена.",
+        "geofence_too_few": "Нужно минимум 3 точки.",
+        "geofence_saved": "Граница сохранена ({n} точек).",
+        "geofence_cancelled": "Редактирование границы отменено.",
+        "geofence_no_session": "Нет активного редактирования.",
+        "geofence_clear_usage": "Используй: /geofence_clear <site_id>",
+        "geofence_cleared": "Граница объекта «{name}» удалена.",
+        "active_none": "Сейчас никто не на смене.",
+        "active_summary": "Открытые смены:\n{body}",
     },
 }
 

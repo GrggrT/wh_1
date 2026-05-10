@@ -26,6 +26,25 @@ class Settings(BaseSettings):
     daily_digest_enabled: bool = True
     daily_digest_hour: int = 22  # local hour (timezone setting)
 
+    # Auto-close breaks running longer than this many hours
+    max_break_hours: int = 4
+
+    # FastAPI admin panel — empty admin_password disables the panel
+    admin_password: str = ""
+    admin_username: str = "owner"
+    admin_port: int = 8000
+    admin_host: str = "0.0.0.0"  # noqa: S104  # bind all on hosting platforms
+
+    # Webhook mode — empty webhook_url falls back to long polling
+    webhook_url: str = ""
+    webhook_secret: str = ""
+    webhook_path: str = "/tg/webhook"
+
+    # OpenAI Whisper transcription for voice notes — empty key disables it
+    openai_api_key: str = ""
+    whisper_model: str = "whisper-1"
+    whisper_language: str = "ru"
+
 
 def get_settings() -> Settings:
     return Settings()  # type: ignore[call-arg]

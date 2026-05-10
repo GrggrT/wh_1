@@ -7,7 +7,8 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.core.models import Shift, Site, User
+from src.core.models import Crew, Shift, Site, User
+from src.services.crews import ROLE_FOREMAN, ROLE_OWNER
 
 
 class ShiftAlreadyOpenError(Exception):
@@ -31,6 +32,18 @@ async def ensure_user(session: AsyncSession, tg_id: int, name: str) -> User:
 
 async def get_open_shift(session: AsyncSession, user_id: int) -> Shift | None:
     stmt = select(Shift).where(Shift.user_id == user_id, Shift.end_at.is_(None))
+    result = await session.execute(stmt)
+    return result.scalar_one_or_none()
+
+
+async def get_last_site_id(session: AsyncSession, user_id: int) -> int | None:
+    """Most-recently used site_id from this user's prior shifts (any state)."""
+    stmt = (
+        select(Shift.site_id)
+        .where(Shift.user_id == user_id, Shift.site_id.is_not(None))
+        .order_by(Shift.start_at.desc())
+        .limit(1)
+    )
     result = await session.execute(stmt)
     return result.scalar_one_or_none()
 
@@ -74,6 +87,42 @@ async def stop_shift(
 
 async def get_user_sites(session: AsyncSession, user_id: int) -> list[Site]:
     stmt = select(Site).where(Site.user_id == user_id, Site.archived_at.is_(None))
+    result = await session.execute(stmt)
+    return list(result.scalars().all())
+
+
+async def resolve_effective_site_owner_id(
+    session: AsyncSession, db_user: User,
+) -> int | None:
+    """Resolve which user_id owns the sites this user is allowed to clock in to.
+
+    - owner: own sites
+    - foreman: own sites (foreman is the user_id of their crew's sites)
+    - worker with crew_id: sites of that crew's foreman_user_id
+    - worker without a crew: None (no visible sites)
+    """
+    if db_user.role == ROLE_OWNER or db_user.role == ROLE_FOREMAN:
+        return db_user.id
+    if db_user.crew_id is None:
+        return None
+    crew = (
+        await session.execute(select(Crew).where(Crew.id == db_user.crew_id))
+    ).scalar_one_or_none()
+    return crew.foreman_user_id if crew is not None else None
+
+
+async def get_visible_sites_for_user(
+    session: AsyncSession, db_user: User,
+) -> list[Site]:
+    """Active sites this user can clock in to. Empty list if no effective owner."""
+    owner_id = await resolve_effective_site_owner_id(session, db_user)
+    if owner_id is None:
+        return []
+    stmt = (
+        select(Site)
+        .where(Site.user_id == owner_id, Site.archived_at.is_(None))
+        .order_by(Site.name)
+    )
     result = await session.execute(stmt)
     return list(result.scalars().all())
 

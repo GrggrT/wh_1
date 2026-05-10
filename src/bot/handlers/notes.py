@@ -1,16 +1,18 @@
 """Mid-shift annotations: /note and /work_type."""
 
-from aiogram import Router
+from aiogram import F, Router
 from aiogram.filters import Command, CommandObject
 from aiogram.types import Message
 from sqlalchemy import select
 
 from src.bot.strings import t
+from src.core.config import get_settings
 from src.core.db import get_session
 from src.core.models import User
 from src.services.crews import ROLE_FOREMAN, ROLE_OWNER, get_crew_for_foreman
 from src.services.shift_edits import get_shift
 from src.services.shifts import get_open_shift, stop_shift
+from src.services.transcription import transcribe_voice, transcription_enabled
 
 router = Router()
 
@@ -92,6 +94,34 @@ async def cmd_stop_for(
         target_name = target.name
         await session.commit()
     await message.answer(t("stop_for_done", name=target_name))
+
+
+@router.message(F.voice)
+async def handle_voice_note(
+    message: Message, db_user: User | None = None,
+) -> None:
+    """Transcribe a voice message and append it to the open shift note."""
+    if db_user is None or message.voice is None or message.bot is None:
+        return
+    settings = get_settings()
+    if not transcription_enabled(settings):
+        await message.answer(t("voice_disabled"))
+        return
+    async for session in get_session():
+        shift = await get_open_shift(session, db_user.id)
+        if shift is None:
+            await message.answer(t("voice_no_open_shift"))
+            return
+        text = await transcribe_voice(
+            message.bot, settings, message.voice.file_id,
+        )
+        if not text:
+            await message.answer(t("voice_failed"))
+            return
+        existing = (shift.note or "").strip()
+        shift.note = f"{existing}\n{text}".strip() if existing else text
+        await session.commit()
+    await message.answer(t("voice_saved", text=text))
 
 
 @router.message(Command("audit"))

@@ -150,3 +150,30 @@ async def set_crew_default_rate(
     crew.default_hourly_rate = rate
     await session.flush()
     return crew
+
+
+async def transfer_user_to_crew(
+    session: AsyncSession, target_tg_id: int, crew_id: int,
+) -> tuple[User, Crew]:
+    """Move a worker between crews. Owner-only at the handler level.
+
+    Refuses to move a foreman (would orphan their crew) and refuses to set
+    a target user's crew if their role is owner.
+    """
+    user = (
+        await session.execute(select(User).where(User.tg_id == target_tg_id))
+    ).scalar_one_or_none()
+    if user is None:
+        raise CrewError("user_not_found")
+    if user.role == ROLE_FOREMAN:
+        raise CrewError("is_foreman")
+    crew = (
+        await session.execute(select(Crew).where(Crew.id == crew_id))
+    ).scalar_one_or_none()
+    if crew is None:
+        raise CrewError("crew_not_found")
+    user.crew_id = crew.id
+    if user.role != ROLE_OWNER:
+        user.role = ROLE_WORKER
+    await session.flush()
+    return user, crew

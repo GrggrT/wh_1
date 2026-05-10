@@ -1,8 +1,10 @@
 """Shift start/stop handlers with FSM."""
 
 from aiogram import F, Router
+from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
+from sqlalchemy import select
 
 from src.bot.keyboards import (
     confirm_stop,
@@ -15,6 +17,7 @@ from src.bot.states import ShiftStart, ShiftStop
 from src.bot.strings import t
 from src.core.config import get_settings
 from src.core.db import get_session
+from src.core.models import User
 from src.services.breaks import get_breaks_for_shift, total_break_hours
 from src.services.geofence import check_point_in_site
 from src.services.photos import archive_shift_photo
@@ -22,8 +25,10 @@ from src.services.reports import compute_hours
 from src.services.shifts import (
     ShiftAlreadyOpenError,
     create_site,
+    get_last_site_id,
     get_open_shift,
-    get_user_sites,
+    get_visible_sites_for_user,
+    resolve_effective_site_owner_id,
     start_shift,
     stop_shift,
 )
@@ -34,8 +39,75 @@ router = Router()
 # --- START SHIFT ---
 
 
+@router.message(Command("quick_start"))
+async def cmd_quick_start(
+    message: Message, state: FSMContext, db_user: User | None = None,
+) -> None:
+    """Skip site selection: reuse the user's last-used site, jump straight to location."""
+    assert message.from_user is not None
+    site_name: str | None = None
+    async for session in get_session():
+        from src.services.shifts import ensure_user
+
+        user = await ensure_user(
+            session, message.from_user.id, message.from_user.full_name,
+        )
+        open_shift = await get_open_shift(session, user.id)
+        if open_shift is not None:
+            start_time = open_shift.start_at.strftime("%H:%M")
+            existing_site = "—"
+            if open_shift.site_id:
+                from src.core.models import Site
+
+                site_obj = (
+                    await session.execute(
+                        select(Site).where(Site.id == open_shift.site_id),
+                    )
+                ).scalar_one_or_none()
+                if site_obj:
+                    existing_site = site_obj.name
+            await message.answer(
+                t(
+                    "shift_already_open",
+                    start_time=start_time,
+                    site=existing_site,
+                ),
+                reply_markup=main_menu(),
+            )
+            return
+        last_site_id = await get_last_site_id(session, user.id)
+        if last_site_id is None:
+            await message.answer(t("quick_start_no_history"))
+            return
+        from src.core.models import Site
+
+        site_obj = (
+            await session.execute(select(Site).where(Site.id == last_site_id))
+        ).scalar_one_or_none()
+        if site_obj is None or site_obj.archived_at is not None:
+            await message.answer(t("quick_start_no_history"))
+            return
+        # Confirm the last-used site is still in the user's visible scope
+        # (worker may have switched crews; old personal site no longer counts).
+        if db_user is not None:
+            owner_id = await resolve_effective_site_owner_id(session, db_user)
+            if owner_id is None or site_obj.user_id != owner_id:
+                await message.answer(t("quick_start_no_history"))
+                return
+        site_name = site_obj.name
+        await state.update_data(user_db_id=user.id, site_id=last_site_id)
+
+    await message.answer(
+        t("quick_start_using_site", site=site_name or "—"),
+        reply_markup=location_request(),
+    )
+    await state.set_state(ShiftStart.awaiting_location)
+
+
 @router.message(F.text.contains("Начать смену"))
-async def handle_start_shift(message: Message, state: FSMContext) -> None:
+async def handle_start_shift(
+    message: Message, state: FSMContext, db_user: User | None = None,
+) -> None:
     assert message.from_user is not None
     async for session in get_session():
         from src.services.shifts import ensure_user
@@ -47,8 +119,6 @@ async def handle_start_shift(message: Message, state: FSMContext) -> None:
             start_time = open_shift.start_at.strftime("%H:%M")
             site_name = "—"
             if open_shift.site_id:
-                from sqlalchemy import select
-
                 from src.core.models import Site
 
                 res = await session.execute(select(Site).where(Site.id == open_shift.site_id))
@@ -61,7 +131,12 @@ async def handle_start_shift(message: Message, state: FSMContext) -> None:
             )
             return
 
-        sites = await get_user_sites(session, user.id)
+        # Sites visible for clock-in: own (owner/foreman) or crew foreman's (worker).
+        sites = (
+            await get_visible_sites_for_user(session, db_user)
+            if db_user is not None
+            else []
+        )
         await state.update_data(user_db_id=user.id)
 
     await message.answer(t("select_site"), reply_markup=site_selection(sites))
@@ -90,15 +165,28 @@ async def handle_site_selected(callback: CallbackQuery, state: FSMContext) -> No
 
 
 @router.message(ShiftStart.entering_site_name)
-async def handle_new_site_name(message: Message, state: FSMContext) -> None:
+async def handle_new_site_name(
+    message: Message, state: FSMContext, db_user: User | None = None,
+) -> None:
     assert message.text is not None
     assert message.from_user is not None
 
     data = await state.get_data()
     user_db_id: int = data["user_db_id"]
 
+    site_id: int
     async for session in get_session():
-        site = await create_site(session, user_db_id, message.text.strip())
+        # Owner of the new site = effective scope owner (foreman for workers in a crew).
+        owner_id: int | None = user_db_id
+        if db_user is not None:
+            resolved = await resolve_effective_site_owner_id(session, db_user)
+            if resolved is not None:
+                owner_id = resolved
+        if owner_id is None:
+            await message.answer(t("no_crew"))
+            await state.clear()
+            return
+        site = await create_site(session, owner_id, message.text.strip())
         await session.commit()
         site_id = site.id
 
