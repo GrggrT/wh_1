@@ -1,3 +1,4 @@
+from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -32,7 +33,11 @@ class Settings(BaseSettings):
     # FastAPI admin panel — empty admin_password disables the panel
     admin_password: str = ""
     admin_username: str = "owner"
-    admin_port: int = 8000
+    # Railway/Heroku-style $PORT is preferred; ADMIN_PORT overrides for local use.
+    admin_port: int = Field(
+        default=8000,
+        validation_alias=AliasChoices("ADMIN_PORT", "PORT"),
+    )
     admin_host: str = "0.0.0.0"  # noqa: S104  # bind all on hosting platforms
 
     # Webhook mode — empty webhook_url falls back to long polling
