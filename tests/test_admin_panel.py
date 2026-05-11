@@ -83,6 +83,20 @@ def test_webhook_route_absent_when_not_configured(
     assert resp.status_code == 404
 
 
+def test_metrics_requires_auth(client_with_password: TestClient) -> None:
+    resp = client_with_password.get("/metrics")
+    assert resp.status_code == 401
+
+
+def test_metrics_disabled_admin_returns_503(
+    client_without_password: TestClient,
+) -> None:
+    resp = client_without_password.get(
+        "/metrics", headers=_basic("owner", "anything"),
+    )
+    assert resp.status_code == 503
+
+
 def test_rate_limit_blocks_after_max_failures() -> None:
     """After admin_auth_max_failures bad attempts, even correct creds get 429."""
     app = create_app()

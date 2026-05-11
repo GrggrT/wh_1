@@ -17,7 +17,17 @@ from sqlalchemy import desc, func, select
 from src.admin.auth import require_admin
 from src.core.config import Settings, get_settings
 from src.core.db import get_session
-from src.core.models import AuditLog, Crew, Shift, Site, User
+from src.core.models import (
+    Advance,
+    AuditLog,
+    Crew,
+    DayEntry,
+    Shift,
+    Site,
+    User,
+)
+from src.services.app_settings import TOGGLE_KEYS
+from src.services.app_settings import get_settings as get_app_settings
 from src.services.breaks import get_breaks_for_shifts, total_break_hours
 from src.services.reports import compute_hours
 
@@ -492,5 +502,106 @@ def create_app(
     @app.get("/healthz")
     async def healthz() -> dict[str, str]:
         return {"status": "ok"}
+
+    @app.get("/metrics", response_class=Response)
+    async def metrics(
+        _user: str = Depends(require_admin),
+        settings: Settings = Depends(get_settings),
+    ) -> Response:
+        """Prometheus-style text exposition of bot health gauges.
+
+        Single-tenant deployment, so we don't bother with histograms or
+        process metrics — just the counts an operator wants on a glance
+        dashboard.
+        """
+        tz = ZoneInfo(settings.timezone)
+        now_local = datetime.now(tz=tz)
+        today_local = now_local.date()
+        day_start = datetime.combine(today_local, datetime.min.time(), tzinfo=tz)
+        day_end = day_start + timedelta(days=1)
+        week_start_date = today_local - timedelta(days=today_local.weekday())
+        week_start = datetime.combine(
+            week_start_date, datetime.min.time(), tzinfo=tz,
+        )
+
+        async for session in get_session():
+            users_total = (
+                await session.execute(select(func.count(User.id)))
+            ).scalar_one()
+            open_shifts = (
+                await session.execute(
+                    select(func.count(Shift.id)).where(Shift.end_at.is_(None)),
+                )
+            ).scalar_one()
+            shifts_today = (
+                await session.execute(
+                    select(func.count(Shift.id)).where(
+                        Shift.start_at >= day_start, Shift.start_at < day_end,
+                    ),
+                )
+            ).scalar_one()
+            shifts_week = (
+                await session.execute(
+                    select(func.count(Shift.id)).where(
+                        Shift.start_at >= week_start,
+                    ),
+                )
+            ).scalar_one()
+            sites_active = (
+                await session.execute(
+                    select(func.count(Site.id)).where(Site.archived_at.is_(None)),
+                )
+            ).scalar_one()
+            day_entries_total = (
+                await session.execute(select(func.count(DayEntry.id)))
+            ).scalar_one()
+            day_entries_today = (
+                await session.execute(
+                    select(func.count(DayEntry.id)).where(
+                        DayEntry.day == today_local,
+                    ),
+                )
+            ).scalar_one()
+            advances_total = (
+                await session.execute(select(func.count(Advance.id)))
+            ).scalar_one()
+            snap = await get_app_settings(session)
+            await session.commit()
+
+        toggles = {key: int(bool(getattr(snap, key))) for key in TOGGLE_KEYS}
+        lines: list[str] = [
+            "# HELP wh1_users_total Total users known to the bot.",
+            "# TYPE wh1_users_total gauge",
+            f"wh1_users_total {users_total}",
+            "# HELP wh1_open_shifts Shifts currently in progress.",
+            "# TYPE wh1_open_shifts gauge",
+            f"wh1_open_shifts {open_shifts}",
+            "# HELP wh1_shifts_today Shifts started today (local tz).",
+            "# TYPE wh1_shifts_today gauge",
+            f"wh1_shifts_today {shifts_today}",
+            "# HELP wh1_shifts_week Shifts started this week (Mon-based).",
+            "# TYPE wh1_shifts_week gauge",
+            f"wh1_shifts_week {shifts_week}",
+            "# HELP wh1_sites_active Sites not archived.",
+            "# TYPE wh1_sites_active gauge",
+            f"wh1_sites_active {sites_active}",
+            "# HELP wh1_day_entries_total All DayEntry rows.",
+            "# TYPE wh1_day_entries_total gauge",
+            f"wh1_day_entries_total {day_entries_total}",
+            "# HELP wh1_day_entries_today DayEntry rows for today.",
+            "# TYPE wh1_day_entries_today gauge",
+            f"wh1_day_entries_today {day_entries_today}",
+            "# HELP wh1_advances_total All advance rows.",
+            "# TYPE wh1_advances_total gauge",
+            f"wh1_advances_total {advances_total}",
+            "# HELP wh1_feature_enabled Feature toggle state (0/1) per key.",
+            "# TYPE wh1_feature_enabled gauge",
+        ]
+        lines.extend(
+            f'wh1_feature_enabled{{key="{key}"}} {value}'
+            for key, value in toggles.items()
+        )
+        body = "\n".join(lines) + "\n"
+        return Response(content=body, media_type="text/plain; version=0.0.4")
 
     return app

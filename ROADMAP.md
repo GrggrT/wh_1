@@ -13,10 +13,10 @@
 
 ## Phase 4 — Production polish (remaining)
 
-### P2 — quality (deferred — non-blocker)
-- [ ] **Phase 2C/3.x test coverage** — admin filter paths + Phase 3.x feature tests (deferred until DB test infra exists)
-- [ ] **Doc cleanup** — update or archive `AGENT_SPEC_phase0.md`, `AUDIT.md`, `DECISIONS.md` (all reflect Phase 0 only)
-- [ ] **Metrics endpoint** — `/metrics` in admin panel: shifts/day, active users, error rate
+### P2 — quality (Batch 6.2)
+- [x] **DB-integration test infra** — aiosqlite-backed integration tests for app_settings / day_entries / advances services
+- [x] **Doc cleanup** — moved phase-0 specs into `docs/archive/`
+- [x] **Metrics endpoint** — `/metrics` in admin panel: Prometheus-style gauges (users, shifts, day-entries, toggles)
 
 ## Future (post-Phase 5)
 - Geofence as activated feature (currently deferred)
