@@ -14,6 +14,7 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
             "/edit_day YYYY-MM-DD <часы> — изменить день\n"
             "/remind_on HH — вечернее напоминание поставить часы\n"
             "/remind_off — отключить напоминание\n"
+            "/settings — настройки режима (владелец)\n"
             "/salary [YYYY-MM] — расчёт зарплаты\n"
             "/my_advances [YYYY-MM] — мои авансы\n"
             "/advance <tg_id> <сумма> — записать аванс (бригадир/владелец)\n"
@@ -432,6 +433,15 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
             "Вечернее напоминание включено: в {hour}:00 (часовой пояс сервера)."
         ),
         "remind_off_ok": "Вечернее напоминание выключено.",
+        # Phase 5.4 — feature toggles
+        "settings_header": (
+            "Настройки бота. Нажми, чтобы переключить:"
+        ),
+        "settings_saved": "Сохранено.",
+        "settings_label_sites_enabled": "Объекты",
+        "settings_label_crews_enabled": "Бригады",
+        "settings_label_geofence_enabled": "Геозоны",
+        "settings_label_legacy_clock_inout_enabled": "Старый режим (смены)",
     },
 }
 

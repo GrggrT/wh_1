@@ -26,6 +26,9 @@ from src.bot.handlers import (
     shifts,
     system,
 )
+from src.bot.handlers import (
+    settings as settings_handler,
+)
 from src.bot.scheduler_runner import run_scheduler
 from src.bot.strings import t
 from src.core.config import Settings, get_settings
@@ -101,6 +104,7 @@ _BOT_COMMANDS: list[BotCommand] = [
     BotCommand(command="edit_day", description="Изменить день: /edit_day YYYY-MM-DD <часы>"),
     BotCommand(command="remind_on", description="Включить вечернее напоминание: /remind_on HH"),
     BotCommand(command="remind_off", description="Отключить вечернее напоминание"),
+    BotCommand(command="settings", description="Настройки режима бота (владелец)"),
     BotCommand(command="advance", description="Записать аванс: /advance <tg_id> <сумма>"),
     BotCommand(command="my_advances", description="Мои авансы"),
     BotCommand(command="crew_advances", description="Авансы бригады"),
@@ -248,6 +252,7 @@ async def main() -> None:
     dp.include_router(exports.router)
     dp.include_router(day_entries.router)
     dp.include_router(advances.router)
+    dp.include_router(settings_handler.router)
 
     _register_error_handler(dp, bot, settings)
 

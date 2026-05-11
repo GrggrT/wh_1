@@ -207,6 +207,37 @@ class Advance(Base):
     )
 
 
+class AppSettings(Base):
+    """Phase 5.4: single-row global feature toggles.
+
+    Single-tenant bot, so a single row (id=1) is sufficient. Defaults match
+    the simplified Phase 5 product: just type hours per day, everything else
+    optional.
+    """
+
+    __tablename__ = "app_settings"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    sites_enabled: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default="false",
+    )
+    crews_enabled: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default="false",
+    )
+    geofence_enabled: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default="false",
+    )
+    legacy_clock_inout_enabled: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default="true",
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
+
+
 class AuditLog(Base):
     __tablename__ = "audit_log"
 
