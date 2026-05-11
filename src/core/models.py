@@ -42,6 +42,10 @@ class User(Base):
         Integer, nullable=True, server_default="19",
     )
     day_reminder_last_sent: Mapped[date | None] = mapped_column(Date, nullable=True)
+    # Phase 6.3: onboarding wizard. NULL = wizard not yet completed.
+    onboarded_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True,
+    )
 
     sites: Mapped[list["Site"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     shifts: Mapped[list["Shift"]] = relationship(back_populates="user")

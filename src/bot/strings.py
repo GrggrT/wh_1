@@ -448,6 +448,48 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
         "settings_label_crews_enabled": "Бригады",
         "settings_label_geofence_enabled": "Геозоны",
         "settings_label_legacy_clock_inout_enabled": "Старый режим (смены)",
+        # Phase 6.3 — onboarding wizard
+        "onb_welcome": (
+            "Привет, {name}! Я бот для учёта рабочих часов.\n\n"
+            "Давай быстро настроим — займёт минуту. Можно прервать /cancel."
+        ),
+        "onb_name_prompt": (
+            "Как тебя записать в отчётах? "
+            "Можно оставить «{tg_name}» — жми кнопку ниже — или прислать другое."
+        ),
+        "onb_name_use_tg_btn": "Оставить «{tg_name}»",
+        "onb_name_bad": "Имя пустое. Пришли текстом или жми кнопку ниже.",
+        "onb_name_saved": "Имя: {name}",
+        "onb_rate_prompt": (
+            "Какая у тебя ставка за час в PLN? "
+            "Например: 35 или 42.5\n"
+            "Если не знаешь — жми «Пропустить», настроим позже через /set_rate."
+        ),
+        "onb_rate_skip_btn": "Пропустить",
+        "onb_rate_bad": (
+            "Не понял сумму. Пример: 35 или 42.5. Или жми «Пропустить»."
+        ),
+        "onb_rate_saved": "Ставка: {rate} PLN/ч",
+        "onb_rate_skipped": "Ставку пропустили.",
+        "onb_reminder_prompt": (
+            "Хочешь, я буду напоминать вечером поставить часы?"
+        ),
+        "onb_reminder_btn_19": "В 19:00",
+        "onb_reminder_btn_20": "В 20:00",
+        "onb_reminder_btn_no": "Не нужно",
+        "onb_reminder_saved": "Напомню в {hour}:00.",
+        "onb_reminder_skipped": "Без напоминаний — окей.",
+        "onb_done": (
+            "Готово! Используй кнопки ниже:\n"
+            "🕒 Часы за сегодня — поставить часы\n"
+            "📅 Мои дни — последние 14 дней\n"
+            "💰 Зарплата — расчёт за месяц\n"
+            "💵 Авансы — мои авансы\n\n"
+            "Всё через /help."
+        ),
+        "onb_cancelled": (
+            "Настройка прервана. Запусти ещё раз через /start, когда будешь готов."
+        ),
         # Phase 6.1 — simple-mode menu
         "menu_btn_hours": "🕒 Часы за сегодня",
         "menu_btn_my_days": "📅 Мои дни",

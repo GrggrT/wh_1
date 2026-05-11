@@ -16,3 +16,9 @@ class ShiftStop(StatesGroup):
 
 class GeofenceEdit(StatesGroup):
     collecting_points = State()
+
+
+class Onboarding(StatesGroup):
+    awaiting_name = State()
+    awaiting_rate = State()
+    awaiting_reminder = State()

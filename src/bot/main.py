@@ -21,6 +21,7 @@ from src.bot.handlers import (
     exports,
     geofence_edit,
     notes,
+    onboarding,
     reports,
     shift_edits,
     shifts,
@@ -242,6 +243,7 @@ async def main() -> None:
     dp.message.middleware(UserResolveMiddleware(settings.owner_tg_id))
     dp.message.middleware(FeatureGateMiddleware())
 
+    dp.include_router(onboarding.router)
     dp.include_router(common.router)
     dp.include_router(system.router)
     dp.include_router(admin.router)

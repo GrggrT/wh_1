@@ -8,6 +8,7 @@ from aiogram.types import Message
 
 from src.bot.handlers.advances import cmd_my_advances, cmd_salary
 from src.bot.handlers.day_entries import cmd_h, cmd_my_days
+from src.bot.handlers.onboarding import start_wizard
 from src.bot.keyboards import simple_menu
 from src.bot.strings import t
 from src.core.db import get_session
@@ -46,6 +47,9 @@ async def cmd_start(
     message: Message, state: FSMContext, db_user: User | None = None,
 ) -> None:
     await state.clear()
+    if db_user is not None and db_user.onboarded_at is None:
+        await start_wizard(message, state, db_user)
+        return
     snap = await _snapshot()
     user_name = message.from_user.full_name if message.from_user else "User"
     await message.answer(
