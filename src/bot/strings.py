@@ -9,6 +9,9 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
             "Команды:\n"
             "/start — начало работы\n"
             "/help — справка\n"
+            "/h <часы> — поставить часы за сегодня (например: /h 8)\n"
+            "/my_days — мои последние 14 дней\n"
+            "/edit_day YYYY-MM-DD <часы> — изменить день\n"
             "/today — смены за сегодня\n"
             "/me_yesterday — мои смены за вчера\n"
             "/quick_start — быстрый старт смены (последний объект)\n"
@@ -349,6 +352,29 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
         "geofence_cleared": "Граница объекта «{name}» удалена.",
         "active_none": "Сейчас никто не на смене.",
         "active_summary": "Открытые смены:\n{body}",
+        # Phase 5.1 — daily hours entry
+        "h_prompt": "Сколько часов отработал сегодня?",
+        "h_prompt_with_suggest": (
+            "Сколько часов отработал сегодня? Обычно у тебя {suggest} ч."
+        ),
+        "h_recorded_new": "✅ Записал {hours} ч за {date}.",
+        "h_recorded_updated": "✏️ Обновил {date}: было {old} ч, стало {hours} ч.",
+        "h_bad_value": (
+            "Не понял число часов. Пример: /h 8 или /h 8.5. "
+            "Допустимо от 0.25 до 24."
+        ),
+        "h_edit_usage": (
+            "Используй: /edit_day YYYY-MM-DD <часы>. "
+            "Например: /edit_day 2026-05-10 8.5"
+        ),
+        "h_bad_date": "Неверная дата. Используй формат YYYY-MM-DD.",
+        "my_days_empty": (
+            "За последние 14 дней нет записей. "
+            "Используй /h <часы>, чтобы поставить часы за сегодня."
+        ),
+        "my_days_header": "Последние 14 дней:",
+        "my_days_row": "{date}: {hours} ч",
+        "my_days_total": "Итого: {total} ч за {n} дн.",
     },
 }
 

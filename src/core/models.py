@@ -1,8 +1,18 @@
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 
 from geoalchemy2 import Geography
-from sqlalchemy import BigInteger, Boolean, DateTime, ForeignKey, Numeric, Text, func
+from sqlalchemy import (
+    BigInteger,
+    Boolean,
+    Date,
+    DateTime,
+    ForeignKey,
+    Numeric,
+    Text,
+    UniqueConstraint,
+    func,
+)
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
@@ -133,6 +143,39 @@ class Break(Base):
     end_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     shift: Mapped["Shift"] = relationship(back_populates="breaks")
+
+
+class DayEntry(Base):
+    """Phase 5: simplified daily hours entry.
+
+    One row per (user, day). Hours include any breaks (worker reports a single
+    net number). `site_id` is set only when the "sites" feature toggle is ON.
+    """
+
+    __tablename__ = "day_entries"
+    __table_args__ = (
+        UniqueConstraint("user_id", "day", name="uq_day_entries_user_day"),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    user_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("users.id", ondelete="CASCADE"), nullable=False,
+    )
+    day: Mapped[date] = mapped_column(Date, nullable=False)
+    hours: Mapped[Decimal] = mapped_column(Numeric(5, 2), nullable=False)
+    site_id: Mapped[int | None] = mapped_column(
+        BigInteger, ForeignKey("sites.id", ondelete="SET NULL"),
+    )
+    note: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now(),
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
 
 
 class AuditLog(Base):

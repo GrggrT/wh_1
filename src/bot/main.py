@@ -16,6 +16,7 @@ from src.bot.handlers import (
     breaks,
     common,
     crew_admin,
+    day_entries,
     exports,
     geofence_edit,
     notes,
@@ -94,6 +95,9 @@ class UserResolveMiddleware(BaseMiddleware):
 _BOT_COMMANDS: list[BotCommand] = [
     BotCommand(command="start", description="Начало работы"),
     BotCommand(command="help", description="Справка по командам"),
+    BotCommand(command="h", description="Поставить часы за сегодня: /h 8"),
+    BotCommand(command="my_days", description="Мои последние 14 дней"),
+    BotCommand(command="edit_day", description="Изменить день: /edit_day YYYY-MM-DD <часы>"),
     BotCommand(command="today", description="Смены за сегодня"),
     BotCommand(command="me_yesterday", description="Мои смены за вчера"),
     BotCommand(command="quick_start", description="Быстрый старт смены (последний объект)"),
@@ -234,6 +238,7 @@ async def main() -> None:
     dp.include_router(notes.router)
     dp.include_router(reports.router)
     dp.include_router(exports.router)
+    dp.include_router(day_entries.router)
 
     _register_error_handler(dp, bot, settings)
 
