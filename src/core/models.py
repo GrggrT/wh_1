@@ -178,6 +178,29 @@ class DayEntry(Base):
     )
 
 
+class Advance(Base):
+    """Phase 5.2: cash advance paid to a worker mid-period.
+
+    Deducted from the worker's monthly salary computation.
+    """
+
+    __tablename__ = "advances"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    user_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("users.id", ondelete="CASCADE"), nullable=False,
+    )
+    day: Mapped[date] = mapped_column(Date, nullable=False)
+    amount: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
+    note: Mapped[str | None] = mapped_column(Text)
+    recorded_by_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("users.id", ondelete="SET NULL"), nullable=False,
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now(),
+    )
+
+
 class AuditLog(Base):
     __tablename__ = "audit_log"
 

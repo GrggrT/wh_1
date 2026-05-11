@@ -12,6 +12,11 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
             "/h <часы> — поставить часы за сегодня (например: /h 8)\n"
             "/my_days — мои последние 14 дней\n"
             "/edit_day YYYY-MM-DD <часы> — изменить день\n"
+            "/salary [YYYY-MM] — расчёт зарплаты\n"
+            "/my_advances [YYYY-MM] — мои авансы\n"
+            "/advance <tg_id> <сумма> — записать аванс (бригадир/владелец)\n"
+            "/crew_advances [YYYY-MM] — авансы бригады (бригадир)\n"
+            "/crew_salary [YYYY-MM] — зарплата бригады (бригадир)\n"
             "/today — смены за сегодня\n"
             "/me_yesterday — мои смены за вчера\n"
             "/quick_start — быстрый старт смены (последний объект)\n"
@@ -375,6 +380,40 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
         "my_days_header": "Последние 14 дней:",
         "my_days_row": "{date}: {hours} ч",
         "my_days_total": "Итого: {total} ч за {n} дн.",
+        # Phase 5.2 — advances + salary
+        "advance_usage": (
+            "Используй: /advance <tg_id> <сумма> [комментарий]. "
+            "Например: /advance 123456789 500 Аванс на материалы"
+        ),
+        "advance_bad_amount": (
+            "Сумма должна быть положительным числом (PLN). Пример: 500 или 500.50"
+        ),
+        "advance_recorded": (
+            "✅ Аванс зафиксирован.\n"
+            "Работник: {name}\n"
+            "Сумма: {amount} PLN\n"
+            "Дата: {date}\n"
+            "Комментарий: {note}"
+        ),
+        "advances_empty": "Авансов за период нет.",
+        "advances_header": "Авансы за {year}-{month}:",
+        "advance_row": "{date}: {amount} PLN — {note}",
+        "advances_total": "Итого авансов: {total} PLN",
+        "crew_advances_header": "Авансы бригады за {year}-{month}:",
+        "crew_advances_member": "{name}: {total} PLN ({n} шт)",
+        "month_format": "Неверный формат месяца. Используй YYYY-MM, например 2026-05.",
+        "salary_header": "Расчёт за {year}-{month}:",
+        "salary_hours": "Часы: {h}",
+        "salary_earnings": "Начислено: {earnings} PLN",
+        "salary_advances": "Авансы: {advances} PLN",
+        "salary_net": "К выплате: {net} PLN",
+        "crew_salary_header": "Зарплата бригады за {year}-{month}:",
+        "crew_salary_row": (
+            "{name}: {hours} ч, авансы {advances} PLN → к выплате {net} PLN"
+        ),
+        "crew_salary_total": "Итого к выплате: {total} PLN",
+        "crew_salary_empty": "За этот месяц нет ни часов, ни авансов.",
+        "user_not_found": "Пользователь не найден.",
     },
 }
 

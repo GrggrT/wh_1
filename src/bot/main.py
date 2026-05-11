@@ -13,6 +13,7 @@ from aiogram.types import BotCommand, Message, TelegramObject
 
 from src.bot.handlers import (
     admin,
+    advances,
     breaks,
     common,
     crew_admin,
@@ -98,6 +99,11 @@ _BOT_COMMANDS: list[BotCommand] = [
     BotCommand(command="h", description="Поставить часы за сегодня: /h 8"),
     BotCommand(command="my_days", description="Мои последние 14 дней"),
     BotCommand(command="edit_day", description="Изменить день: /edit_day YYYY-MM-DD <часы>"),
+    BotCommand(command="advance", description="Записать аванс: /advance <tg_id> <сумма>"),
+    BotCommand(command="my_advances", description="Мои авансы"),
+    BotCommand(command="crew_advances", description="Авансы бригады"),
+    BotCommand(command="salary", description="Зарплата за месяц"),
+    BotCommand(command="crew_salary", description="Зарплата бригады"),
     BotCommand(command="today", description="Смены за сегодня"),
     BotCommand(command="me_yesterday", description="Мои смены за вчера"),
     BotCommand(command="quick_start", description="Быстрый старт смены (последний объект)"),
@@ -239,6 +245,7 @@ async def main() -> None:
     dp.include_router(reports.router)
     dp.include_router(exports.router)
     dp.include_router(day_entries.router)
+    dp.include_router(advances.router)
 
     _register_error_handler(dp, bot, settings)
 
