@@ -4,20 +4,29 @@ import base64
 import os
 
 import pytest
+from fastapi import HTTPException
 from fastapi.testclient import TestClient
 from src.admin.app import create_app
+from src.admin.rate_limit import tracker
 from src.core.config import Settings, get_settings
 
 
-def _make_settings(password: str) -> Settings:
+def _make_settings(password: str, **overrides: object) -> Settings:
     os.environ.setdefault("BOT_TOKEN", "test")
     os.environ.setdefault("OWNER_TG_ID", "1")
-    return Settings(  # type: ignore[call-arg]
-        bot_token="test",
-        owner_tg_id=1,
-        admin_password=password,
-        admin_username="owner",
-    )
+    kwargs: dict[str, object] = {
+        "bot_token": "test",
+        "owner_tg_id": 1,
+        "admin_password": password,
+        "admin_username": "owner",
+    }
+    kwargs.update(overrides)
+    return Settings(**kwargs)  # type: ignore[call-arg,arg-type]
+
+
+@pytest.fixture(autouse=True)
+def _reset_rate_limit() -> None:
+    tracker.reset()
 
 
 def _basic(user: str, password: str) -> dict[str, str]:
@@ -72,6 +81,69 @@ def test_webhook_route_absent_when_not_configured(
 ) -> None:
     resp = client_with_password.post("/tg/webhook", json={})
     assert resp.status_code == 404
+
+
+def test_rate_limit_blocks_after_max_failures() -> None:
+    """After admin_auth_max_failures bad attempts, even correct creds get 429."""
+    app = create_app()
+    app.dependency_overrides[get_settings] = lambda: _make_settings(
+        "secret",
+        admin_auth_max_failures=3,
+        admin_auth_window_seconds=60,
+        admin_auth_block_seconds=300,
+    )
+    client = TestClient(app)
+    for _ in range(3):
+        assert client.get("/", headers=_basic("owner", "wrong")).status_code == 401
+    # Next request: even with correct password, the IP is blocked.
+    resp = client.get("/", headers=_basic("owner", "secret"))
+    assert resp.status_code == 429
+    assert resp.json()["detail"] == "too_many_attempts"
+
+
+def test_rate_limit_clears_on_successful_auth() -> None:
+    """A successful auth resets the per-IP failure counter."""
+    from unittest.mock import MagicMock
+
+    from fastapi.security import HTTPBasicCredentials
+    from src.admin.auth import require_admin
+
+    settings = _make_settings(
+        "secret",
+        admin_auth_max_failures=3,
+        admin_auth_window_seconds=60,
+        admin_auth_block_seconds=300,
+    )
+    request = MagicMock()
+    request.client.host = "1.2.3.4"
+
+    # 2 failures (one below threshold).
+    for _ in range(2):
+        with pytest.raises(HTTPException) as exc:
+            require_admin(
+                request,
+                credentials=HTTPBasicCredentials(username="owner", password="x"),
+                settings=settings,
+            )
+        assert exc.value.status_code == 401
+
+    # Successful auth clears the counter.
+    user = require_admin(
+        request,
+        credentials=HTTPBasicCredentials(username="owner", password="secret"),
+        settings=settings,
+    )
+    assert user == "owner"
+
+    # Three more bad attempts: all return 401, none get blocked early.
+    for _ in range(3):
+        with pytest.raises(HTTPException) as exc:
+            require_admin(
+                request,
+                credentials=HTTPBasicCredentials(username="owner", password="x"),
+                settings=settings,
+            )
+        assert exc.value.status_code == 401
 
 
 def test_webhook_rejects_wrong_secret() -> None:

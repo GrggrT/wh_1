@@ -33,6 +33,10 @@ class Settings(BaseSettings):
     # FastAPI admin panel — empty admin_password disables the panel
     admin_password: str = ""
     admin_username: str = "owner"
+    # Failed-auth rate limit (per client IP): K failures within window_seconds → block_seconds.
+    admin_auth_max_failures: int = 5
+    admin_auth_window_seconds: int = 60
+    admin_auth_block_seconds: int = 300
     # Railway/Heroku-style $PORT is preferred; ADMIN_PORT overrides for local use.
     admin_port: int = Field(
         default=8000,
