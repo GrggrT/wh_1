@@ -12,6 +12,8 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
             "/h <часы> — поставить часы за сегодня (например: /h 8)\n"
             "/my_days — мои последние 14 дней\n"
             "/edit_day YYYY-MM-DD <часы> — изменить день\n"
+            "/remind_on HH — вечернее напоминание поставить часы\n"
+            "/remind_off — отключить напоминание\n"
             "/salary [YYYY-MM] — расчёт зарплаты\n"
             "/my_advances [YYYY-MM] — мои авансы\n"
             "/advance <tg_id> <сумма> — записать аванс (бригадир/владелец)\n"
@@ -414,6 +416,22 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
         "crew_salary_total": "Итого к выплате: {total} PLN",
         "crew_salary_empty": "За этот месяц нет ни часов, ни авансов.",
         "user_not_found": "Пользователь не найден.",
+        # Phase 5.3 — evening reminders
+        "day_reminder_text": (
+            "Не забудь поставить часы за сегодня. Сколько отработал?"
+        ),
+        "day_reminder_with_suggest": (
+            "Не забудь поставить часы за сегодня. Обычно у тебя {suggest} ч."
+        ),
+        "remind_on_usage": (
+            "Используй: /remind_on HH (час по локальному времени, 0–23). "
+            "Например: /remind_on 19"
+        ),
+        "remind_bad_hour": "Час должен быть числом от 0 до 23.",
+        "remind_on_ok": (
+            "Вечернее напоминание включено: в {hour}:00 (часовой пояс сервера)."
+        ),
+        "remind_off_ok": "Вечернее напоминание выключено.",
     },
 }
 

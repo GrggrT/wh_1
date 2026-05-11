@@ -8,6 +8,7 @@ from sqlalchemy import (
     Date,
     DateTime,
     ForeignKey,
+    Integer,
     Numeric,
     Text,
     UniqueConstraint,
@@ -36,6 +37,11 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now(),
     )
+    # Phase 5.3: evening day-entry reminder. NULL = disabled.
+    remind_hour_local: Mapped[int | None] = mapped_column(
+        Integer, nullable=True, server_default="19",
+    )
+    day_reminder_last_sent: Mapped[date | None] = mapped_column(Date, nullable=True)
 
     sites: Mapped[list["Site"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     shifts: Mapped[list["Shift"]] = relationship(back_populates="user")

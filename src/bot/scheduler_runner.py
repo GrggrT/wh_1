@@ -9,10 +9,17 @@ import structlog
 from aiogram import Bot
 from aiogram.exceptions import TelegramAPIError
 
+from src.bot.handlers.day_entries import quick_keyboard
 from src.bot.strings import t
 from src.core.config import Settings
 from src.core.db import get_session
 from src.services.breaks import auto_close_break, find_stale_open_breaks
+from src.services.day_entries import (
+    format_hours,
+    list_recent_entries,
+    quick_pick_values,
+    smart_suggest,
+)
 from src.services.digest import (
     build_daily_digest,
     build_monthly_digest,
@@ -20,6 +27,7 @@ from src.services.digest import (
     previous_full_week,
     previous_month,
 )
+from src.services.reminders import find_users_needing_reminder, mark_reminded
 from src.services.reports import compute_hours
 from src.services.scheduler import (
     auto_close_shift,
@@ -188,6 +196,36 @@ async def _maybe_send_weekly_digest(bot: Bot, settings: Settings) -> None:
         logger.warning("weekly_digest_send_failed")
 
 
+async def _maybe_send_day_reminders(bot: Bot, settings: Settings) -> None:
+    """DM each user with the inline quick-pick at/after their configured
+    local reminder hour, once per day, only when no day-entry exists yet."""
+    tz = ZoneInfo(settings.timezone)
+    now_local = datetime.now(tz=tz)
+    today = now_local.date()
+    async for session in get_session():
+        users = await find_users_needing_reminder(session, tz=tz, now=now_local)
+        if not users:
+            return
+        for user in users:
+            recent = await list_recent_entries(session, user_id=user.id, days=14)
+            suggested = smart_suggest(recent)
+            picks = quick_pick_values(suggested)
+            text = (
+                t("day_reminder_with_suggest", suggest=format_hours(suggested))
+                if suggested is not None
+                else t("day_reminder_text")
+            )
+            try:
+                await bot.send_message(
+                    user.tg_id, text, reply_markup=quick_keyboard(picks),
+                )
+            except TelegramAPIError:
+                logger.warning("day_reminder_send_failed", user_id=user.id)
+                continue
+            await mark_reminded(session, user=user, today=today)
+        await session.commit()
+
+
 async def run_scheduler(bot: Bot, settings: Settings) -> None:
     """Run the maintenance loop until cancelled."""
     interval = settings.scheduler_interval_seconds
@@ -198,6 +236,7 @@ async def run_scheduler(bot: Bot, settings: Settings) -> None:
             await _maybe_send_daily_digest(bot, settings)
             await _maybe_send_weekly_digest(bot, settings)
             await _maybe_send_monthly_digest(bot, settings)
+            await _maybe_send_day_reminders(bot, settings)
         except Exception:  # noqa: BLE001
             logger.exception("scheduler_iteration_failed")
         await asyncio.sleep(interval)

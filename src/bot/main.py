@@ -99,6 +99,8 @@ _BOT_COMMANDS: list[BotCommand] = [
     BotCommand(command="h", description="Поставить часы за сегодня: /h 8"),
     BotCommand(command="my_days", description="Мои последние 14 дней"),
     BotCommand(command="edit_day", description="Изменить день: /edit_day YYYY-MM-DD <часы>"),
+    BotCommand(command="remind_on", description="Включить вечернее напоминание: /remind_on HH"),
+    BotCommand(command="remind_off", description="Отключить вечернее напоминание"),
     BotCommand(command="advance", description="Записать аванс: /advance <tg_id> <сумма>"),
     BotCommand(command="my_advances", description="Мои авансы"),
     BotCommand(command="crew_advances", description="Авансы бригады"),

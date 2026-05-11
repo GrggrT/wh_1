@@ -34,7 +34,7 @@ _CB_PICK_TODAY = "dh:"  # dh:<hours>  — set today's hours to <hours>
 _CB_EDIT_DAY = "de:"  # de:<YYYY-MM-DD> — prompt to edit a specific day
 
 
-def _quick_keyboard(picks: list[Decimal]) -> InlineKeyboardMarkup:
+def quick_keyboard(picks: list[Decimal]) -> InlineKeyboardMarkup:
     """Render the quick-pick row as an inline keyboard."""
     buttons: list[InlineKeyboardButton] = []
     for v in picks:
@@ -118,7 +118,7 @@ async def cmd_h(
         if suggested is not None
         else t("h_prompt")
     )
-    await message.answer(prompt, reply_markup=_quick_keyboard(picks))
+    await message.answer(prompt, reply_markup=quick_keyboard(picks))
 
 
 @router.callback_query(F.data.startswith(_CB_PICK_TODAY))
@@ -159,6 +159,52 @@ async def cmd_edit_day(
         await message.answer(t("h_bad_value"))
         return
     await _record(message, db_user=db_user, day=day, hours=hours)
+
+
+@router.message(Command("remind_on"))
+async def cmd_remind_on(
+    message: Message, command: CommandObject, db_user: User | None = None,
+) -> None:
+    """``/remind_on HH`` — set the local hour for the evening reminder."""
+    if db_user is None:
+        return
+    if not command.args:
+        await message.answer(t("remind_on_usage"))
+        return
+    raw = command.args.strip()
+    try:
+        hour = int(raw)
+    except ValueError:
+        await message.answer(t("remind_bad_hour"))
+        return
+    if not (0 <= hour <= 23):
+        await message.answer(t("remind_bad_hour"))
+        return
+    async for session in get_session():
+        user = await session.get(User, db_user.id)
+        if user is None:
+            return
+        user.remind_hour_local = hour
+        # Reset idempotency so a same-day re-arm fires today if hour is reached.
+        user.day_reminder_last_sent = None
+        await session.commit()
+    await message.answer(t("remind_on_ok", hour=f"{hour:02d}"))
+
+
+@router.message(Command("remind_off"))
+async def cmd_remind_off(
+    message: Message, db_user: User | None = None,
+) -> None:
+    """``/remind_off`` — disable the evening reminder for this user."""
+    if db_user is None:
+        return
+    async for session in get_session():
+        user = await session.get(User, db_user.id)
+        if user is None:
+            return
+        user.remind_hour_local = None
+        await session.commit()
+    await message.answer(t("remind_off_ok"))
 
 
 @router.message(Command("my_days"))
