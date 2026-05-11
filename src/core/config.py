@@ -50,6 +50,11 @@ class Settings(BaseSettings):
     whisper_model: str = "whisper-1"
     whisper_language: str = "ru"
 
+    # Sentry error tracking — empty DSN disables it
+    sentry_dsn: str = ""
+    sentry_environment: str = "production"
+    sentry_traces_sample_rate: float = 0.0
+
 
 def get_settings() -> Settings:
     return Settings()  # type: ignore[call-arg]

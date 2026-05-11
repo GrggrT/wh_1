@@ -28,6 +28,7 @@ from src.bot.scheduler_runner import run_scheduler
 from src.bot.strings import t
 from src.core.config import Settings, get_settings
 from src.core.db import dispose_engine, get_session, init_engine
+from src.core.sentry import capture_exception, init_sentry
 from src.services.crews import ROLE_OWNER, ensure_owner_role
 from src.services.shifts import ensure_user
 
@@ -180,6 +181,8 @@ def _register_error_handler(dp: Dispatcher, bot: Bot, settings: Settings) -> Non
             update_id=update_id,
             exc_info=exception,
         )
+        if isinstance(exception, BaseException):
+            capture_exception(exception)
         message: Message | None = None
         if update is not None:
             message = getattr(update, "message", None)
@@ -208,6 +211,9 @@ async def main() -> None:
     structlog.configure(
         wrapper_class=structlog.make_filtering_bound_logger(log_level),
     )
+
+    if init_sentry(settings):
+        logger.info("sentry_enabled", environment=settings.sentry_environment)
 
     init_engine(settings)
 
