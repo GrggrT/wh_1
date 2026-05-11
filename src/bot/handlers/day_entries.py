@@ -18,8 +18,10 @@ from src.bot.strings import t
 from src.core.db import get_session
 from src.core.models import User
 from src.services.day_entries import (
+    DAY_OFF,
     format_hours,
     get_day_entry,
+    is_day_off,
     list_recent_entries,
     parse_hours,
     quick_pick_values,
@@ -35,17 +37,29 @@ _CB_EDIT_DAY = "de:"  # de:<YYYY-MM-DD> — prompt to edit a specific day
 
 
 def quick_keyboard(picks: list[Decimal]) -> InlineKeyboardMarkup:
-    """Render the quick-pick row as an inline keyboard."""
-    buttons: list[InlineKeyboardButton] = []
+    """Render the quick-pick row as an inline keyboard.
+
+    Hours buttons are followed by a dedicated "Выходной" (day-off) button on
+    its own row, so the worker can tap a single button for "didn't work today".
+    """
+    hour_buttons: list[InlineKeyboardButton] = []
     for v in picks:
         label = f"{format_hours(v)} ч"
-        buttons.append(
+        hour_buttons.append(
             InlineKeyboardButton(
                 text=label, callback_data=f"{_CB_PICK_TODAY}{format_hours(v)}",
             ),
         )
-    # 3 buttons per row.
-    rows = [buttons[i : i + 3] for i in range(0, len(buttons), 3)]
+    # 3 buttons per row for the hours, then a separate day-off row.
+    rows = [hour_buttons[i : i + 3] for i in range(0, len(hour_buttons), 3)]
+    rows.append(
+        [
+            InlineKeyboardButton(
+                text=t("day_off_btn"),
+                callback_data=f"{_CB_PICK_TODAY}{format_hours(DAY_OFF)}",
+            ),
+        ],
+    )
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
@@ -69,16 +83,31 @@ async def _record(
             session, user_id=db_user.id, day=day, hours=hours,
         )
         await session.commit()
-    text = (
-        t("h_recorded_new", hours=format_hours(hours), date=day.isoformat())
-        if created
-        else t(
-            "h_recorded_updated",
-            old=format_hours(previous_hours) if previous_hours is not None else "—",
-            hours=format_hours(hours),
-            date=day.isoformat(),
+    if is_day_off(hours):
+        text = (
+            t("day_off_recorded_new", date=day.isoformat())
+            if created
+            else t(
+                "day_off_recorded_updated",
+                old=format_hours(previous_hours)
+                if previous_hours is not None
+                else "—",
+                date=day.isoformat(),
+            )
         )
-    )
+    else:
+        text = (
+            t("h_recorded_new", hours=format_hours(hours), date=day.isoformat())
+            if created
+            else t(
+                "h_recorded_updated",
+                old=format_hours(previous_hours)
+                if previous_hours is not None
+                else "—",
+                hours=format_hours(hours),
+                date=day.isoformat(),
+            )
+        )
     target = (
         message_or_cq.message
         if isinstance(message_or_cq, CallbackQuery)
@@ -219,7 +248,11 @@ async def cmd_my_days(message: Message, db_user: User | None = None) -> None:
         return
     lines = [t("my_days_header")]
     total = Decimal(0)
+    worked_days = 0
     for e in entries:
+        if is_day_off(e.hours):
+            lines.append(t("my_days_row_dayoff", date=e.day.isoformat()))
+            continue
         lines.append(
             t(
                 "my_days_row",
@@ -228,5 +261,6 @@ async def cmd_my_days(message: Message, db_user: User | None = None) -> None:
             ),
         )
         total += e.hours
-    lines.append(t("my_days_total", total=format_hours(total), n=len(entries)))
+        worked_days += 1
+    lines.append(t("my_days_total", total=format_hours(total), n=worked_days))
     await message.answer("\n".join(lines))

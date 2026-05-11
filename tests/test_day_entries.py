@@ -8,12 +8,14 @@ from decimal import Decimal
 
 import pytest
 from src.services.day_entries import (
+    DAY_OFF,
     MAX_HOURS,
-    MIN_HOURS,
+    MIN_WORK_HOURS,
     QUICK_HOURS,
     SUGGEST_MIN_OCCURRENCES,
     SUGGEST_WINDOW_DAYS,
     format_hours,
+    is_day_off,
     parse_hours,
     quick_pick_values,
     smart_suggest,
@@ -54,15 +56,29 @@ def test_parse_hours_accepts_valid(raw: str, expected: Decimal) -> None:
 
 @pytest.mark.parametrize(
     "raw",
-    ["", "abc", "-1", "0", "0.1", "24.5", "999", "8h"],
+    ["", "abc", "-1", "0.1", "24.5", "999", "8h"],
 )
 def test_parse_hours_rejects_invalid(raw: str) -> None:
     assert parse_hours(raw) is None
 
 
 def test_parse_hours_boundaries() -> None:
-    assert parse_hours(str(MIN_HOURS)) == MIN_HOURS
+    assert parse_hours(str(MIN_WORK_HOURS)) == MIN_WORK_HOURS
     assert parse_hours(str(MAX_HOURS)) == MAX_HOURS
+
+
+def test_parse_hours_accepts_zero_as_day_off() -> None:
+    assert parse_hours("0") == DAY_OFF
+    assert parse_hours("0.0") == DAY_OFF
+    assert parse_hours(" 0 ") == DAY_OFF
+
+
+def test_is_day_off_helper() -> None:
+    assert is_day_off(DAY_OFF) is True
+    assert is_day_off(Decimal("0")) is True
+    assert is_day_off(Decimal("0.00")) is True
+    assert is_day_off(Decimal("8")) is False
+    assert is_day_off(Decimal("0.25")) is False
 
 
 # ---- smart_suggest ---------------------------------------------------------

@@ -365,8 +365,14 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
         "h_prompt_with_suggest": (
             "Сколько часов отработал сегодня? Обычно у тебя {suggest} ч."
         ),
+        "day_off_btn": "🌴 Выходной",
         "h_recorded_new": "✅ Записал {hours} ч за {date}.",
         "h_recorded_updated": "✏️ Обновил {date}: было {old} ч, стало {hours} ч.",
+        "day_off_recorded_new": "🌴 Записал выходной за {date}.",
+        "day_off_recorded_updated": (
+            "✏️ Обновил {date}: было {old} ч, стало — выходной."
+        ),
+        "my_days_row_dayoff": "{date}: выходной",
         "h_bad_value": (
             "Не понял число часов. Пример: /h 8 или /h 8.5. "
             "Допустимо от 0.25 до 24."
@@ -442,6 +448,12 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
         "settings_label_crews_enabled": "Бригады",
         "settings_label_geofence_enabled": "Геозоны",
         "settings_label_legacy_clock_inout_enabled": "Старый режим (смены)",
+        # Phase 6.1 — simple-mode menu
+        "menu_btn_hours": "🕒 Часы за сегодня",
+        "menu_btn_my_days": "📅 Мои дни",
+        "menu_btn_salary": "💰 Зарплата",
+        "menu_btn_advances": "💵 Авансы",
+        "menu_hint": "Главное меню. Жми кнопки или /help.",
         # Phase 5.5 — cutover
         "feature_disabled": (
             "Эта функция выключена. Владелец может включить её в /settings."

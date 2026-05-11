@@ -7,9 +7,13 @@ from aiogram.types import (
 
 from src.bot.strings import t
 from src.core.models import Site
+from src.services.app_settings import SettingsSnapshot
 
 
 def main_menu(role: str = "worker") -> ReplyKeyboardMarkup:
+    """Legacy clock-in/out menu. Used inside the shift FSM where the user has
+    already opted into the legacy flow. For the default app menu use
+    :func:`simple_menu` (settings-aware)."""
     rows: list[list[KeyboardButton]] = [
         [
             KeyboardButton(text=f"\U0001f7e2 {t('start_shift_btn')}"),
@@ -17,6 +21,38 @@ def main_menu(role: str = "worker") -> ReplyKeyboardMarkup:
         ],
     ]
     if role in ("foreman", "owner"):
+        rows.append(
+            [
+                KeyboardButton(text=f"\U0001f465 {t('crew_today_btn')}"),
+                KeyboardButton(text=f"\U0001f4e9 {t('invite_btn')}"),
+            ],
+        )
+    return ReplyKeyboardMarkup(keyboard=rows, resize_keyboard=True)
+
+
+def simple_menu(
+    snap: SettingsSnapshot, role: str = "worker",
+) -> ReplyKeyboardMarkup:
+    """Default reply keyboard: simple-mode buttons + (optional) legacy +
+    (optional) foreman/owner shortcuts. Labels match `menu_btn_*` strings."""
+    rows: list[list[KeyboardButton]] = [
+        [
+            KeyboardButton(text=t("menu_btn_hours")),
+            KeyboardButton(text=t("menu_btn_my_days")),
+        ],
+        [
+            KeyboardButton(text=t("menu_btn_salary")),
+            KeyboardButton(text=t("menu_btn_advances")),
+        ],
+    ]
+    if snap.legacy_clock_inout_enabled:
+        rows.append(
+            [
+                KeyboardButton(text=f"\U0001f7e2 {t('start_shift_btn')}"),
+                KeyboardButton(text=f"\U0001f534 {t('stop_shift_btn')}"),
+            ],
+        )
+    if role in ("foreman", "owner") and snap.crews_enabled:
         rows.append(
             [
                 KeyboardButton(text=f"\U0001f465 {t('crew_today_btn')}"),

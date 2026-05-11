@@ -32,13 +32,17 @@ SUGGEST_WINDOW_DAYS = 5
 # Minimum count for a value to be considered "habitual" within the window.
 SUGGEST_MIN_OCCURRENCES = 3
 
-# Hard limits to keep input sane.
-MIN_HOURS = Decimal("0.25")
+# Hard limits to keep input sane. 0 is reserved for "day off" (выходной).
+DAY_OFF = Decimal("0")
+MIN_WORK_HOURS = Decimal("0.25")
 MAX_HOURS = Decimal("24")
 
 
 def parse_hours(raw: str) -> Decimal | None:
-    """Parse a user-supplied hours string. Returns ``None`` on bad input."""
+    """Parse a user-supplied hours string. Returns ``None`` on bad input.
+
+    Accepts 0 (= day off) and values in [MIN_WORK_HOURS, MAX_HOURS].
+    """
     text = raw.strip().replace(",", ".")
     if not text:
         return None
@@ -46,10 +50,16 @@ def parse_hours(raw: str) -> Decimal | None:
         value = Decimal(text)
     except (ValueError, ArithmeticError):
         return None
-    if value < MIN_HOURS or value > MAX_HOURS:
+    if value == DAY_OFF:
+        return DAY_OFF
+    if value < MIN_WORK_HOURS or value > MAX_HOURS:
         return None
     # Quantize to two decimal places.
     return value.quantize(Decimal("0.01"))
+
+
+def is_day_off(value: Decimal) -> bool:
+    return value == DAY_OFF
 
 
 async def upsert_day_entry(

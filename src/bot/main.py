@@ -100,6 +100,7 @@ class UserResolveMiddleware(BaseMiddleware):
 _BOT_COMMANDS: list[BotCommand] = [
     BotCommand(command="start", description="Начало работы"),
     BotCommand(command="help", description="Справка по командам"),
+    BotCommand(command="menu", description="Главное меню"),
     BotCommand(command="h", description="Поставить часы за сегодня: /h 8"),
     BotCommand(command="my_days", description="Мои последние 14 дней"),
     BotCommand(command="edit_day", description="Изменить день: /edit_day YYYY-MM-DD <часы>"),
