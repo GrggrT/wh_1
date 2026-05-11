@@ -1,21 +1,31 @@
 # Construction Time-Tracking Telegram Bot
 
-Russian-language single-tenant Telegram bot that tracks construction crew work shifts. Workers clock in/out via Telegram with location verification and photos; the owner gets payroll-ready Excel exports, an admin web panel, and scheduled digests.
+Russian-language single-tenant Telegram bot for construction-crew time tracking. The default flow is **simple**: workers type hours at end of day; owners record advances and see monthly salary. Advanced features (per-site rates, crews, geofencing, the legacy clock-in/out flow) are opt-in via `/settings` (owner-only).
 
 Stack: **Python 3.12** · **aiogram 3** · **FastAPI** · **SQLAlchemy 2 async + asyncpg** · **PostgreSQL 16 + PostGIS** · **Alembic** · **Jinja2** · **structlog** · **ruff + mypy --strict** · **pytest**.
 
-## Features
+## Default (simple) mode
 
-- **Shift tracking** — `/start`-button flow with site selection, location check vs. site geofence, optional start/end photos
-- **Crews & roles** — owner manages foremen; foremen invite workers via 6-char codes (`/invite`, `/join`); per-crew default hourly rate; transfer, remove, leave-crew, archived sites
-- **Rates & earnings** — site-level and user-level hourly rates (PLN), automatic earnings computation, break-time subtraction (`/break_start`, `/break_stop`, `/break_status`, retroactive break edits)
-- **Reports** — `/today`, `/me_yesterday`, `/week`, `/month`, `/me YYYY-MM`, `/active`, `/stats`; foreman variants `/crew_today`/`/crew_week`/`/crew_month`/`/crew_shifts`; XLSX export `/export YYYY-MM` and `/crew_export YYYY-MM`
-- **Geofencing** — owner/foreman draw site polygons by sending location messages (`/geofence_set`, `/geofence_save`)
-- **Audit & retroactive edits** — every admin action lands in `audit_log`; `/shifts`, `/edit_shift`, `/delete_shift`, `/restore_shift`, `/add_break`, `/edit_break`, `/delete_break`, `/admin_audit`, `/audit`
-- **Voice notes** — Whisper transcription appends to active shift (`F.voice` handler, OpenAI API)
-- **Photo archive** — start/end photos uploaded to Supabase Storage; `file_id` fallback when storage is disabled
-- **Scheduled jobs** — reminders, stale-shift auto-close, stale-break auto-close, daily/weekly/monthly digests to owner
-- **Admin web panel** (FastAPI + Jinja2 + Chart.js) — `/`, `/users`, `/sites`, `/shifts` (filterable), `/calendar`, `/audit` (filterable). HTTP Basic auth.
+- **Daily hours** — `/h 8` (or `/h` for inline quick-picks 6/7/8/9/10/12 + smart-suggested modal value); `/edit_day YYYY-MM-DD <часы>`; `/my_days` for the last 14
+- **Evening reminders** — `/remind_on 19` schedules a per-user push at the chosen local hour; `/remind_off` disables; idempotent per day
+- **Advances** — foreman/owner records `/advance <tg_id> <amount>`; users see `/my_advances`
+- **Salary** — `/salary [YYYY-MM]` returns hours × rate − advances for the period
+- **Rates** — owner/foreman sets `/set_rate <tg_id> <amount>`; users check `/my_rate`
+
+## Optional features (flip in /settings)
+
+Owner toggles in `/settings` enable extra `/command` entry points. Disabled commands politely report "feature disabled — owner can enable it in /settings".
+
+- **`sites_enabled`** — per-site CRUD (`/sites`, `/site_info`, `/set_site_rate`, archive/rename), site rate overrides user rate
+- **`crews_enabled`** — crew membership (`/invite`, `/join`, `/crew`, `/leave_crew`), foreman role, `/crew_advances`, `/crew_salary`, `/crew_today` etc.
+- **`geofence_enabled`** — owner/foreman draws site polygons (`/geofence_set`, `/geofence_save`)
+- **`legacy_clock_inout_enabled`** — the original FSM clock-in/out flow (`/quick_start`, `/my_open`, `/break_*`, `/today`, `/week`, `/export`, etc.). Default ON for existing deployments; flip OFF to hide the legacy commands
+
+Plus, always available regardless of toggles:
+
+- **Voice notes** — Whisper transcription appended to active shift (`F.voice` handler, OpenAI API; requires legacy mode)
+- **Admin web panel** (FastAPI + Jinja2 + Chart.js) — `/`, `/users`, `/sites`, `/shifts`, `/calendar`, `/audit`. HTTP Basic auth with per-IP rate limiting
+- **Scheduled jobs** — daily/weekly/monthly digests to owner, evening day-entry reminders, stale-shift/break auto-close (legacy)
 - **Webhook or polling** — same FastAPI process can serve Telegram webhook with `X-Telegram-Bot-Api-Secret-Token` validation; falls back to long-polling when webhook env is empty
 
 ## Setup

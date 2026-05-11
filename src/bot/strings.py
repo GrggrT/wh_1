@@ -442,6 +442,52 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
         "settings_label_crews_enabled": "Бригады",
         "settings_label_geofence_enabled": "Геозоны",
         "settings_label_legacy_clock_inout_enabled": "Старый режим (смены)",
+        # Phase 5.5 — cutover
+        "feature_disabled": (
+            "Эта функция выключена. Владелец может включить её в /settings."
+        ),
+        "help_core": (
+            "Команды:\n"
+            "/start — начало работы\n"
+            "/help — справка\n"
+            "/h <часы> — поставить часы за сегодня (например: /h 8)\n"
+            "/my_days — мои последние 14 дней\n"
+            "/edit_day YYYY-MM-DD <часы> — изменить день\n"
+            "/remind_on HH — вечернее напоминание поставить часы\n"
+            "/remind_off — отключить напоминание\n"
+            "/salary [YYYY-MM] — расчёт зарплаты\n"
+            "/my_advances [YYYY-MM] — мои авансы\n"
+            "/advance <tg_id> <сумма> — записать аванс (бригадир/владелец)\n"
+            "/whoami — кто я / /my_rate — моя ставка\n"
+            "/set_rate <tg_id> <ставка> — ставка работника (бригадир/владелец)\n"
+            "/settings — настройки режима (владелец)\n"
+            "/cancel — отмена текущего действия"
+        ),
+        "help_section_legacy": (
+            "\n\nСмены (старый режим):\n"
+            "/today /me_yesterday /week /month /me YYYY-MM\n"
+            "/quick_start /my_open /shifts /shift_info <id>\n"
+            "/break_start /break_stop /break_status\n"
+            "/note <текст> /work_type <тип>\n"
+            "/export YYYY-MM — выгрузка в Excel"
+        ),
+        "help_section_sites": (
+            "\n\nОбъекты:\n"
+            "/sites /site_info <id> /sites_archive\n"
+            "/set_site_rate <id> <ставка>\n"
+            "/archive_site <id> /unarchive_site <id> /rename_site <id> <название>"
+        ),
+        "help_section_geofence": (
+            "\n\nГеозоны:\n"
+            "/geofence_set <id> /geofence_save /geofence_cancel /geofence_clear <id>"
+        ),
+        "help_section_crews": (
+            "\n\nБригады:\n"
+            "/join <код> /invite /crew /leave_crew\n"
+            "/crew_today /crew_week /crew_month /crew_export YYYY-MM\n"
+            "/crew_advances [YYYY-MM] /crew_salary [YYYY-MM]\n"
+            "/add_foreman <tg_id> (владелец) /transfer_crew <tg_id> <crew_id> (владелец)"
+        ),
     },
 }
 

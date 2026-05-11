@@ -29,6 +29,7 @@ from src.bot.handlers import (
 from src.bot.handlers import (
     settings as settings_handler,
 )
+from src.bot.middlewares.features import FeatureGateMiddleware
 from src.bot.scheduler_runner import run_scheduler
 from src.bot.strings import t
 from src.core.config import Settings, get_settings
@@ -238,6 +239,7 @@ async def main() -> None:
     dp = Dispatcher(storage=storage)
 
     dp.message.middleware(UserResolveMiddleware(settings.owner_tg_id))
+    dp.message.middleware(FeatureGateMiddleware())
 
     dp.include_router(common.router)
     dp.include_router(system.router)
