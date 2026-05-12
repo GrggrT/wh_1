@@ -12,6 +12,7 @@ from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.types import BotCommand, CallbackQuery, Message, TelegramObject
 
 from src.bot.handlers import (
+    accounting,
     admin,
     advances,
     breaks,
@@ -121,7 +122,10 @@ _CORE_COMMANDS: list[BotCommand] = [
     BotCommand(command="my_days", description="Мои последние 14 дней"),
     BotCommand(command="calendar", description="Календарь — редактировать данные по датам"),
     BotCommand(command="edit_day", description="Изменить день: /edit_day YYYY-MM-DD <часы>"),
-    BotCommand(command="salary", description="Моя зарплата за месяц"),
+    BotCommand(command="period", description="Расчёт за период (часы + выплаты)"),
+    BotCommand(command="cash", description="Денежный поток за месяц"),
+    BotCommand(command="owed", description="Что ещё не выплачено"),
+    BotCommand(command="salary", description="То же, что /period"),
     BotCommand(command="my_advances", description="Мои авансы"),
     BotCommand(command="my_rate", description="Моя ставка"),
     BotCommand(command="remind_on", description="Включить вечернее напоминание: /remind_on HH"),
@@ -311,6 +315,7 @@ async def main() -> None:
     dp.include_router(exports.router)
     dp.include_router(day_entries.router)
     dp.include_router(advances.router)
+    dp.include_router(accounting.router)
     dp.include_router(calendar_handler.router)
     dp.include_router(settings_handler.router)
 

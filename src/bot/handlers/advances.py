@@ -11,12 +11,12 @@ from aiogram.filters import Command, CommandObject
 from aiogram.types import Message
 from sqlalchemy import select
 
+from src.bot.handlers.accounting import cmd_period
 from src.bot.strings import t
 from src.core.config import get_settings
 from src.core.db import get_session
 from src.core.models import User
 from src.services.advances import (
-    SalaryBreakdown,
     compute_salary,
     list_advances,
     list_advances_for_users,
@@ -49,20 +49,6 @@ def _fmt_money(value: Decimal | None) -> str:
     if value is None:
         return "—"
     return f"{value:.2f}"
-
-
-def _fmt_salary(s: SalaryBreakdown) -> str:
-    lines = [
-        t("salary_header", year=s.year, month=f"{s.month:02d}"),
-        t("salary_hours", h=format_hours(s.total_hours)),
-        t(
-            "salary_earnings",
-            earnings=_fmt_money(s.total_earnings),
-        ),
-        t("salary_advances", advances=_fmt_money(s.advances_total)),
-        t("salary_net", net=_fmt_money(s.net_payable)),
-    ]
-    return "\n".join(lines)
 
 
 # --- /advance ---------------------------------------------------------------
@@ -254,24 +240,12 @@ async def cmd_crew_advances(
 async def cmd_salary(
     message: Message, command: CommandObject, db_user: User | None = None,
 ) -> None:
-    """``/salary`` (current month) or ``/salary YYYY-MM``."""
-    if db_user is None:
-        return
-    settings = get_settings()
-    tz = ZoneInfo(settings.timezone)
-    if command.args:
-        ym = parse_year_month(command.args)
-        if ym is None:
-            await message.answer(t("month_format"))
-            return
-        year, month = ym
-    else:
-        year, month = _current_year_month(tz)
-    async for session in get_session():
-        breakdown = await compute_salary(
-            session, user=db_user, year=year, month=month, tz=tz,
-        )
-    await message.answer(_fmt_salary(breakdown))
+    """``/salary`` is an alias for ``/period`` — same period-aware view.
+
+    Kept so existing button/menu shortcuts continue to work; the new
+    payment-aware report lives in ``handlers.accounting``.
+    """
+    await cmd_period(message, command, db_user=db_user)
 
 
 # --- /crew_salary -----------------------------------------------------------

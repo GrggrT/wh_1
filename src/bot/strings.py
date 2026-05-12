@@ -531,6 +531,40 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
         "cal_pay_recorded": (
             "✅ Выплата {amount} PLN зачтена за {period} (выплачено {date})."
         ),
+        # Phase 6.7 — period / cashflow / owed accounting
+        "period_header": "📊 Период {month} {year}",
+        "period_hours_rate": "Часы: {hours}  ·  Ставка: {rate}",
+        "period_no_rate": "Часы: {hours}  ·  Ставка: не задана",
+        "period_earnings": "Начислено: {earnings} PLN",
+        "period_earnings_unpriced": "Начислено: — (нет ставки)",
+        "period_advances_header": "💵 Авансы (внутри периода): {total} PLN",
+        "period_advance_row": "  · {date}: {amount} PLN — {note}",
+        "period_payments_header": "💰 Выплаты за этот период: {total} PLN",
+        "period_payment_row": "  · {date}: {amount} PLN — {note}",
+        "period_payment_row_late": (
+            "  · {date}: {amount} PLN ← выплачено в {paid_month} {paid_year}"
+        ),
+        "period_no_advances": "💵 Авансов нет.",
+        "period_no_payments": "💰 Выплат нет.",
+        "period_received": "Получено: {received} PLN",
+        "period_remaining": "Осталось: {remaining} PLN",
+        "period_status_pending": "Статус: 🔴 не выплачено",
+        "period_status_partial": "Статус: 🟡 частично",
+        "period_status_settled": "Статус: 🟢 рассчитано",
+        "period_status_overpaid": "Статус: 🔵 переплата {overpaid} PLN",
+        "period_status_unpriced": "Статус: ⚪ нет ставки",
+        "cash_header": "💸 Денежный поток {month} {year}: всего {total} PLN",
+        "cash_empty": "В этом месяце выплат и авансов не было.",
+        "cash_row_advance": "{date} 💵 аванс {amount} PLN (за {period}) — {note}",
+        "cash_row_payment": "{date} 💰 выплата {amount} PLN (за {period}) — {note}",
+        "owed_header": "📋 Незакрытые периоды:",
+        "owed_empty": "Все периоды рассчитаны 🟢",
+        "owed_row_pending": "🔴 {period}: ничего не получено, должно {remaining} PLN",
+        "owed_row_partial": (
+            "🟡 {period}: получено {received} из {earnings}, "
+            "осталось {remaining} PLN"
+        ),
+        "owed_total": "Итого долг: {total} PLN",
         # Phase 5.5 — cutover
         "feature_disabled": (
             "Эта функция выключена. Владелец может включить её в /settings."
@@ -545,7 +579,10 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
             "/edit_day YYYY-MM-DD <часы> — изменить день\n"
             "/remind_on HH — вечернее напоминание поставить часы\n"
             "/remind_off — отключить напоминание\n"
-            "/salary [YYYY-MM] — расчёт зарплаты\n"
+            "/period [YYYY-MM] — расчёт за период (с учётом выплат)\n"
+            "/cash [YYYY-MM] — все выплаты и авансы за месяц\n"
+            "/owed — что ещё не выплачено\n"
+            "/salary [YYYY-MM] — то же, что /period\n"
             "/my_advances [YYYY-MM] — мои авансы\n"
             "/advance <tg_id> <сумма> — записать аванс (бригадир/владелец)\n"
             "/whoami — кто я / /my_rate — моя ставка\n"
