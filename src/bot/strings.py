@@ -559,6 +559,7 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
         "report_bad_arg": "Использование: /report [N] — где N от 1 до 24 месяцев.",
         "report_btn_xlsx": "📥 Скачать XLSX",
         "report_btn_pdf": "📄 Скачать PDF",
+        "report_btn_png": "📈 Скачать PNG",
         # Phase 6.7 — period / cashflow / owed accounting
         "period_pick_prompt": "📊 За какой месяц показать?",
         "period_older_btn": "◀ Раньше",

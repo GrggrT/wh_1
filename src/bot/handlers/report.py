@@ -1,10 +1,11 @@
-"""Phase 6.11a/6.11b/6.11c: ``/report`` — rolling N-month summary.
+"""Phase 6.11a..d: ``/report`` — rolling N-month summary.
 
 Single-user accounting bot's "where do I stand overall?" view. Default
 window is the last 6 months; ``/report N`` picks any 1..24-month window.
 ``/period`` remains the single-month deep-dive; this command is the
-roll-up. The text response carries «📥 XLSX» + «📄 PDF» inline buttons
-that re-fetch and ship the same window as a downloadable file.
+roll-up. The text response carries «📥 XLSX» + «📄 PDF» + «📈 PNG»
+inline buttons that re-fetch and ship the same window as a downloadable
+file.
 """
 
 from __future__ import annotations
@@ -27,6 +28,7 @@ from src.core.config import get_settings
 from src.core.db import get_session
 from src.core.models import User
 from src.services.reports.pdf import build_report_pdf, pdf_filename
+from src.services.reports.png import build_report_png, png_filename
 from src.services.reports.service import get_report_data
 from src.services.reports.text import format_report_text
 from src.services.reports.xlsx import build_report_xlsx, xlsx_filename
@@ -39,6 +41,7 @@ MAX_MONTHS = 24
 
 _XLSX_CB_PREFIX = "report:xlsx:"
 _PDF_CB_PREFIX = "report:pdf:"
+_PNG_CB_PREFIX = "report:png:"
 
 
 def parse_months_arg(raw: str | None) -> int | None:
@@ -68,6 +71,10 @@ def _download_keyboard(months: int) -> InlineKeyboardMarkup:
                 InlineKeyboardButton(
                     text=t("report_btn_pdf"),
                     callback_data=f"{_PDF_CB_PREFIX}{months}",
+                ),
+                InlineKeyboardButton(
+                    text=t("report_btn_png"),
+                    callback_data=f"{_PNG_CB_PREFIX}{months}",
                 ),
             ],
         ],
@@ -146,4 +153,16 @@ async def cb_report_pdf(
         return
     await _send_report_file(
         callback, db_user, _PDF_CB_PREFIX, build_report_pdf, pdf_filename,
+    )
+
+
+@router.callback_query(lambda cq: (cq.data or "").startswith(_PNG_CB_PREFIX))
+async def cb_report_png(
+    callback: CallbackQuery, db_user: User | None = None,
+) -> None:
+    if db_user is None:
+        await callback.answer()
+        return
+    await _send_report_file(
+        callback, db_user, _PNG_CB_PREFIX, build_report_png, png_filename,
     )

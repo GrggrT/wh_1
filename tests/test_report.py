@@ -22,6 +22,7 @@ from src.core.models import Advance, Crew, DayEntry, SalaryPayment, User
 from src.services import accounting as accounting_module
 from src.services.advances import SalaryBreakdown, record_advance
 from src.services.reports.pdf import build_report_pdf, pdf_filename
+from src.services.reports.png import build_report_png, png_filename
 from src.services.reports.service import get_report_data
 from src.services.reports.text import format_report_text
 from src.services.reports.xlsx import build_report_xlsx, xlsx_filename
@@ -387,3 +388,46 @@ async def test_build_report_pdf_handles_overpaid(
     )
     buf = build_report_pdf(data, user)
     assert buf.getvalue().startswith(b"%PDF-")
+
+
+# --- build_report_png --------------------------------------------------
+
+
+_PNG_MAGIC = b"\x89PNG\r\n\x1a\n"
+
+
+def test_png_filename_includes_window() -> None:
+    assert png_filename(6) == "report_6m.png"
+    assert png_filename(24) == "report_24m.png"
+
+
+async def test_build_report_png_returns_valid_png_bytes(
+    session: AsyncSession, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    user = await _seed_user(session)
+    _stub_compute_salary(monkeypatch, by_month={
+        (2026, 5): (Decimal("160"), Decimal("8000")),
+        (2026, 4): (Decimal("160"), Decimal("8000")),
+    })
+    data = await get_report_data(
+        session, user=user, tz=_TZ, today=date(2026, 5, 20), months=2,
+    )
+    buf = build_report_png(data, user)
+    blob = buf.getvalue()
+    assert blob.startswith(_PNG_MAGIC)
+    assert len(blob) > 2000
+
+
+async def test_build_report_png_handles_unpriced_months(
+    session: AsyncSession, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    user = await _seed_user(session, rate=None)
+    _stub_compute_salary(monkeypatch, by_month={
+        (2026, 5): (Decimal("100"), None),
+        (2026, 4): (Decimal("80"), None),
+    })
+    data = await get_report_data(
+        session, user=user, tz=_TZ, today=date(2026, 5, 20), months=2,
+    )
+    buf = build_report_png(data, user)
+    assert buf.getvalue().startswith(_PNG_MAGIC)
