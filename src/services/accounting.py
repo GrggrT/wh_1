@@ -35,7 +35,7 @@ from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.models import Advance, SalaryPayment, User
-from src.services.advances import compute_salary, month_bounds
+from src.services.advances import compute_salary
 
 # Rounding tolerance for settlement: copeck-level differences shouldn't
 # leave a period flagged "partial".
@@ -119,6 +119,8 @@ async def get_period_ledger(
     year: int,
     month: int,
     tz: ZoneInfo,
+    prefetched_advances: list[Advance] | None = None,
+    prefetched_payments: list[SalaryPayment] | None = None,
 ) -> PeriodLedger:
     """Build the ledger for one (user, period).
 
@@ -127,38 +129,56 @@ async def get_period_ledger(
     Both advances and payments are pulled by their declared
     ``period_year`` + ``period_month`` — cash paid in a different calendar
     month attributes back to the work period it covers.
+
+    ``prefetched_advances`` / ``prefetched_payments`` let callers (e.g.
+    multi-month reports) batch the lookup once and slice per period,
+    avoiding 2 round-trips per month.
     """
     breakdown = await compute_salary(
         session, user=user, year=year, month=month, tz=tz,
     )
-    first_day, last_day = month_bounds(year, month)
 
-    advances = list(
-        (
-            await session.execute(
-                select(Advance)
-                .where(
-                    Advance.user_id == user.id,
-                    Advance.period_year == year,
-                    Advance.period_month == month,
+    if prefetched_advances is None:
+        advances = list(
+            (
+                await session.execute(
+                    select(Advance)
+                    .where(
+                        Advance.user_id == user.id,
+                        Advance.period_year == year,
+                        Advance.period_month == month,
+                    )
+                    .order_by(desc(Advance.day), desc(Advance.id)),
                 )
-                .order_by(desc(Advance.day), desc(Advance.id)),
-            )
-        ).scalars().all(),
-    )
-    payments = list(
-        (
-            await session.execute(
-                select(SalaryPayment)
-                .where(
-                    SalaryPayment.user_id == user.id,
-                    SalaryPayment.period_year == year,
-                    SalaryPayment.period_month == month,
+            ).scalars().all(),
+        )
+    else:
+        advances = sorted(
+            prefetched_advances,
+            key=lambda a: (a.day, a.id),
+            reverse=True,
+        )
+
+    if prefetched_payments is None:
+        payments = list(
+            (
+                await session.execute(
+                    select(SalaryPayment)
+                    .where(
+                        SalaryPayment.user_id == user.id,
+                        SalaryPayment.period_year == year,
+                        SalaryPayment.period_month == month,
+                    )
+                    .order_by(desc(SalaryPayment.paid_on), desc(SalaryPayment.id)),
                 )
-                .order_by(desc(SalaryPayment.paid_on), desc(SalaryPayment.id)),
-            )
-        ).scalars().all(),
-    )
+            ).scalars().all(),
+        )
+    else:
+        payments = sorted(
+            prefetched_payments,
+            key=lambda p: (p.paid_on, p.id),
+            reverse=True,
+        )
 
     return PeriodLedger(
         user_id=user.id,
