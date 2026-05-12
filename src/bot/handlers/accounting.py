@@ -20,6 +20,7 @@ import calendar
 import contextlib
 from datetime import date, datetime, timedelta
 from decimal import Decimal
+from html import escape as _esc
 from zoneinfo import ZoneInfo
 
 from aiogram import F, Router
@@ -79,6 +80,15 @@ def _rate_for_user(user: User) -> str:
     return f"{user.hourly_rate:.2f} {user.currency}/ч"
 
 
+def _progress_bar(done: int, total: int, width: int = 12) -> str:
+    """Render a unicode progress bar, e.g. ``▰▰▰▰▱▱▱▱▱▱▱▱ 33%``."""
+    if total <= 0:
+        return "▱" * width + " 0%"
+    ratio = max(0.0, min(1.0, done / total))
+    filled = round(ratio * width)
+    return "▰" * filled + "▱" * (width - filled) + f" {round(ratio * 100)}%"
+
+
 def format_period(ledger: PeriodLedger, user: User) -> str:
     """Format a PeriodLedger as a multi-line user-facing report."""
     cur = user.currency
@@ -118,7 +128,7 @@ def format_period(ledger: PeriodLedger, user: User) -> str:
                     "period_advance_row",
                     date=a.day.isoformat(),
                     amount=_fmt_money(a.amount),
-                    note=a.note or "—",
+                    note=_esc(a.note) if a.note else "—",
                     currency=cur,
                 ),
             )
@@ -154,7 +164,7 @@ def format_period(ledger: PeriodLedger, user: User) -> str:
                         "period_payment_row",
                         date=p.paid_on.isoformat(),
                         amount=_fmt_money(p.amount),
-                        note=p.note or "—",
+                        note=_esc(p.note) if p.note else "—",
                         currency=cur,
                     ),
                 )
@@ -215,7 +225,7 @@ def format_cashflow(
                 date=e.day.isoformat(),
                 amount=_fmt_money(e.amount),
                 period=period,
-                note=e.note or "—",
+                note=_esc(e.note) if e.note else "—",
                 currency=currency,
             ),
         )
@@ -326,6 +336,7 @@ async def _send_period(
         reply_markup=period_png_keyboard(
             year, month, with_forecast=is_current,
         ),
+        parse_mode="HTML",
     )
 
 
@@ -410,7 +421,10 @@ async def cmd_cash(
         entries = await list_cashflow(
             session, user=db_user, start=first_day, end=last_day,
         )
-    await message.answer(format_cashflow(entries, year, month, db_user.currency))
+    await message.answer(
+        format_cashflow(entries, year, month, db_user.currency),
+        parse_mode="HTML",
+    )
 
 
 @router.message(Command("owed"))
@@ -424,7 +438,10 @@ async def cmd_owed(message: Message, db_user: User | None = None) -> None:
         ledgers = await list_open_periods(
             session, user=db_user, tz=tz, today=today,
         )
-    await message.answer(format_owed(ledgers, db_user.currency))
+    await message.answer(
+        format_owed(ledgers, db_user.currency),
+        parse_mode="HTML",
+    )
 
 
 def format_forecast(fc: Forecast, currency: str) -> str:
@@ -446,6 +463,7 @@ def format_forecast(fc: Forecast, currency: str) -> str:
             elapsed=fc.business_days_elapsed,
             total=fc.business_days_total,
             remaining=fc.business_days_remaining,
+            bar=_progress_bar(fc.business_days_elapsed, fc.business_days_total),
         ),
     ]
     if fc.projected_total_hours is None:
@@ -482,7 +500,10 @@ async def cmd_forecast(
             year=today.year, month=today.month,
             today=today, tz=tz,
         )
-    await message.answer(format_forecast(fc, db_user.currency))
+    await message.answer(
+        format_forecast(fc, db_user.currency),
+        parse_mode="HTML",
+    )
 
 
 def format_range_sum(rs: RangeSum, currency: str) -> str:

@@ -694,56 +694,59 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
         # Phase 6.7 — period / cashflow / owed accounting
         "period_pick_prompt": "📊 За какой месяц показать?",
         "period_older_btn": "◀ Раньше",
-        "period_header": "📊 Период {month} {year}",
-        "period_hours_rate": "Часы: {hours}  ·  Ставка: {rate}",
-        "period_no_rate": "Часы: {hours}  ·  Ставка: не задана",
-        "period_earnings": "Начислено: {earnings} {currency}",
+        "period_header": "<b>📊 Период {month} {year}</b>",
+        "period_hours_rate": "Часы: <b>{hours}</b>  ·  Ставка: {rate}",
+        "period_no_rate": "Часы: <b>{hours}</b>  ·  Ставка: не задана",
+        "period_earnings": "Начислено: <b>{earnings} {currency}</b>",
         "period_earnings_unpriced": "Начислено: — (нет ставки)",
-        "period_advances_header": "💵 Авансы (внутри периода): {total} {currency}",
-        "period_advance_row": "  · {date}: {amount} {currency} — {note}",
-        "period_payments_header": "💰 Выплаты за этот период: {total} {currency}",
-        "period_payment_row": "  · {date}: {amount} {currency} — {note}",
+        "period_advances_header": "💵 <b>Авансы</b> (внутри периода): <b>{total} {currency}</b>",
+        "period_advance_row": "  · {date}: <b>{amount} {currency}</b> — {note}",
+        "period_payments_header": "💰 <b>Выплаты за этот период</b>: <b>{total} {currency}</b>",
+        "period_payment_row": "  · {date}: <b>{amount} {currency}</b> — {note}",
         "period_payment_row_late": (
-            "  · {date}: {amount} {currency} ← выплачено в {paid_month} {paid_year}"
+            "  · {date}: <b>{amount} {currency}</b> ← выплачено в {paid_month} {paid_year}"
         ),
         "period_no_advances": "💵 Авансов нет.",
         "period_no_payments": "💰 Выплат нет.",
-        "period_received": "Получено: {received} {currency}",
-        "period_remaining": "Осталось: {remaining} {currency}",
-        "period_status_pending": "Статус: 🔴 не выплачено",
-        "period_status_partial": "Статус: 🟡 частично",
-        "period_status_settled": "Статус: 🟢 рассчитано",
-        "period_status_overpaid": "Статус: 🔵 переплата {overpaid} {currency}",
+        "period_received": "Получено: <b>{received} {currency}</b>",
+        "period_remaining": "Осталось: <b>{remaining} {currency}</b>",
+        "period_status_pending": "Статус: 🔴 <b>не выплачено</b>",
+        "period_status_partial": "Статус: 🟡 <b>частично</b>",
+        "period_status_settled": "Статус: 🟢 <b>рассчитано</b>",
+        "period_status_overpaid": "Статус: 🔵 <b>переплата {overpaid} {currency}</b>",
         "period_status_unpriced": "Статус: ⚪ нет ставки",
-        "cash_header": "💸 Денежный поток {month} {year}: всего {total} {currency}",
+        "cash_header": "<b>💸 Денежный поток {month} {year}</b>\nВсего: <b>{total} {currency}</b>",
         "cash_empty": "В этом месяце выплат и авансов не было.",
-        "cash_row_advance": "{date} 💵 аванс {amount} {currency} (за {period}) — {note}",
-        "cash_row_payment": "{date} 💰 выплата {amount} {currency} (за {period}) — {note}",
-        "owed_header": "📋 Незакрытые периоды:",
+        "cash_row_advance": "{date} 💵 аванс <b>{amount} {currency}</b> (за {period}) — {note}",
+        "cash_row_payment": "{date} 💰 выплата <b>{amount} {currency}</b> (за {period}) — {note}",
+        "owed_header": "<b>📋 Незакрытые периоды:</b>",
         "owed_empty": "Все периоды рассчитаны 🟢",
-        "owed_row_pending": "🔴 {period}: ничего не получено, должно {remaining} {currency}",
-        "owed_row_partial": (
-            "🟡 {period}: получено {received} из {earnings}, "
-            "осталось {remaining} {currency}"
+        "owed_row_pending": (
+            "🔴 <b>{period}</b>: ничего не получено, "
+            "должно <b>{remaining} {currency}</b>"
         ),
-        "owed_total": "Итого долг: {total} {currency}",
+        "owed_row_partial": (
+            "🟡 <b>{period}</b>: получено {received} из {earnings}, "
+            "осталось <b>{remaining} {currency}</b>"
+        ),
+        "owed_total": "<b>Итого долг: {total} {currency}</b>",
         # Phase 7.4 — /forecast
-        "forecast_header": "🔮 Прогноз на {month} {year}",
+        "forecast_header": "<b>🔮 Прогноз на {month} {year}</b>",
         "forecast_mtd": (
-            "Сейчас: {hours} ч, {earnings} {currency}."
+            "Сейчас: <b>{hours} ч</b>, <b>{earnings} {currency}</b>."
         ),
         "forecast_business_days": (
-            "Будни: {elapsed} из {total} (осталось {remaining})."
+            "Будни: {elapsed} из {total} (осталось {remaining})\n{bar}"
         ),
         "forecast_no_projection": (
             "Пока нет данных за этот месяц — прогноз появится после "
             "первого рабочего дня."
         ),
         "forecast_projection": (
-            "Если темп сохранится: {hours} ч, ~{earnings} {currency} "
+            "Если темп сохранится: <b>{hours} ч</b>, ~<b>{earnings} {currency}</b> "
             "к концу месяца."
         ),
-        "forecast_remaining_hours": "Осталось добрать ~{hours} ч.",
+        "forecast_remaining_hours": "Осталось добрать ~<b>{hours} ч</b>.",
         # Phase 7.x — /range
         "range_usage": (
             "Используй: /range YYYY-MM-DD YYYY-MM-DD\n"

@@ -318,7 +318,9 @@ async def cb_period_forecast(
             year=year, month=month,
             today=today, tz=tz,
         )
-    await callback.message.answer(format_forecast(fc, db_user.currency))
+    await callback.message.answer(
+        format_forecast(fc, db_user.currency), parse_mode="HTML",
+    )
     await callback.answer()
 
 
