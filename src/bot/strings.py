@@ -609,6 +609,19 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
             "Авансы: добавлено {adv_in}, пропущено {adv_skip}.\n"
             "Выплаты: добавлено {pay_in}, пропущено {pay_skip}."
         ),
+        "share_backup_issued": (
+            "🔑 Одноразовый код для переноса данных:\n"
+            "{token}\n"
+            "Действует до {expires}.\n"
+            "На новом аккаунте: /restore_from <код>."
+        ),
+        "restore_from_usage": (
+            "Используй: /restore_from <код>\n"
+            "Код выдаёт /share_backup на старом аккаунте."
+        ),
+        "restore_from_failed": (
+            "Не получилось применить код: {reason}."
+        ),
         # Phase 7.2 — smart reminders
         "gap_nudge_with_last": (
             "👋 Давно не виделись. Последняя запись часов: {last_day}.\n"

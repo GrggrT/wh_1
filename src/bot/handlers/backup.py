@@ -18,7 +18,7 @@ from zoneinfo import ZoneInfo
 
 import structlog
 from aiogram import Bot, F, Router
-from aiogram.filters import Command
+from aiogram.filters import Command, CommandObject
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import (
@@ -39,6 +39,11 @@ from src.services.reports.restore import (
     BackupParseError,
     apply_restore,
     parse_backup_xlsx,
+)
+from src.services.share_backup import (
+    ShareTokenError,
+    issue_share_token,
+    redeem_share_token,
 )
 
 logger = structlog.get_logger()
@@ -262,4 +267,73 @@ async def msg_restore_awaiting_confirm(message: Message) -> None:
     await message.answer(
         t("restore_btn_confirm") + " / " + t("restore_btn_cancel"),
         reply_markup=_restore_confirm_kb(),
+    )
+
+
+@router.message(Command("share_backup"))
+async def cmd_share_backup(
+    message: Message, db_user: User | None = None,
+) -> None:
+    """Mint a one-shot token a different Telegram account can redeem."""
+    if db_user is None:
+        return
+    async for session in get_session():
+        issued = await issue_share_token(session, source_user=db_user)
+        await session.commit()
+    logger.info(
+        "share_backup_issued",
+        user_id=db_user.id,
+        tg_id=db_user.tg_id,
+        expires_at=issued.expires_at.isoformat(),
+    )
+    await message.answer(
+        t(
+            "share_backup_issued",
+            token=issued.token,
+            expires=issued.expires_at.strftime("%Y-%m-%d %H:%M UTC"),
+        ),
+    )
+
+
+@router.message(Command("restore_from"))
+async def cmd_restore_from(
+    message: Message,
+    command: CommandObject,
+    db_user: User | None = None,
+) -> None:
+    """Redeem a share token issued by another account."""
+    if db_user is None:
+        return
+    token = (command.args or "").strip()
+    if not token:
+        await message.answer(t("restore_from_usage"))
+        return
+    async for session in get_session():
+        try:
+            result = await redeem_share_token(
+                session, token=token, redeemer=db_user,
+            )
+        except ShareTokenError as exc:
+            await session.rollback()
+            await message.answer(t("restore_from_failed", reason=str(exc)))
+            return
+        await session.commit()
+    logger.info(
+        "share_backup_redeemed",
+        redeemer_user_id=db_user.id,
+        redeemer_tg_id=db_user.tg_id,
+        days_inserted=result.days_inserted,
+        days_skipped=result.days_skipped,
+        advances_inserted=result.advances_inserted,
+        advances_skipped=result.advances_skipped,
+        payments_inserted=result.payments_inserted,
+        payments_skipped=result.payments_skipped,
+    )
+    await message.answer(
+        t(
+            "restore_done",
+            days_in=result.days_inserted, days_skip=result.days_skipped,
+            adv_in=result.advances_inserted, adv_skip=result.advances_skipped,
+            pay_in=result.payments_inserted, pay_skip=result.payments_skipped,
+        ),
     )

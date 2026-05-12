@@ -289,3 +289,27 @@ class AuditLog(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now(),
     )
+
+
+class ShareToken(Base):
+    """One-shot, time-bound token to transfer a user's data to another account."""
+
+    __tablename__ = "share_tokens"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    token: Mapped[str] = mapped_column(Text, unique=True, nullable=False)
+    source_user_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("users.id"), nullable=False,
+    )
+    expires_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False,
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now(),
+    )
+    redeemed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True,
+    )
+    redeemed_by_user_id: Mapped[int | None] = mapped_column(
+        BigInteger, ForeignKey("users.id"), nullable=True,
+    )

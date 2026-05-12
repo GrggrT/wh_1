@@ -134,6 +134,14 @@ _CORE_COMMANDS: list[BotCommand] = [
     BotCommand(command="export_archive", description="ZIP-архив отчёта (XLSX+PDF+PNG)"),
     BotCommand(command="backup", description="Скачать резервную копию данных"),
     BotCommand(command="restore", description="Восстановить из .xlsx-бэкапа"),
+    BotCommand(
+        command="share_backup",
+        description="Одноразовый код для переноса",
+    ),
+    BotCommand(
+        command="restore_from",
+        description="Принять данные по коду",
+    ),
     BotCommand(command="my_days", description="Мои последние 14 дней"),
     BotCommand(command="profile", description="Профиль: имя, ставка, валюта, напоминание"),
     BotCommand(command="my_rate", description="Моя ставка"),
