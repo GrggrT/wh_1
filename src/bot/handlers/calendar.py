@@ -15,6 +15,7 @@ Callback grammar (all comfortably under Telegram's 64-byte limit):
   cal:apr:YYYY-MM-DD:YYYY-MM -> select period -> start advance amount entry (FSM)
   cal:pay:YYYY-MM-DD         -> show period picker for salary payment
   cal:per:YYYY-MM-DD:YYYY-MM -> select period -> start payment amount entry
+  cal:fw:YYYY-MM             -> bulk-fill Mon–Fri ≤ today with 8h (skip filled days)
   cal:noop                   -> placeholder (month header / blank cell)
 """
 
@@ -22,7 +23,7 @@ from __future__ import annotations
 
 import calendar as cal_mod
 import contextlib
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from decimal import Decimal
 from zoneinfo import ZoneInfo
 
@@ -69,7 +70,11 @@ _ADV = _NS + "adv:"
 _APR = _NS + "apr:"
 _PAY = _NS + "pay:"
 _PER = _NS + "per:"
+_FW = _NS + "fw:"
 _NOOP = _NS + "noop"
+
+# Bulk-fill default: a regular workday is 8 hours.
+_WORKWEEK_DEFAULT_HOURS = Decimal("8")
 
 _RU_MONTHS: tuple[str, ...] = (
     "Январь", "Февраль", "Март", "Апрель", "Май", "Июнь",
@@ -187,7 +192,54 @@ async def _build_month_keyboard(
     rows.append(
         [InlineKeyboardButton(text=t("cal_legend"), callback_data=_NOOP)],
     )
+    rows.append(
+        [
+            InlineKeyboardButton(
+                text=t("cal_btn_fill_workweek"),
+                callback_data=f"{_FW}{year}-{month:02d}",
+            ),
+        ],
+    )
     return InlineKeyboardMarkup(inline_keyboard=rows)
+
+
+async def _bulk_fill_workweek(
+    session: AsyncSession, *, user_id: int, year: int, month: int, today: date,
+) -> int:
+    """Fill Mon–Fri days in (year, month) up to ``today`` with 8 h.
+
+    Days that already have an entry (including a recorded day-off) are left
+    untouched — this is a one-tap shortcut for the common "I worked normal
+    hours, nothing exceptional happened" case, not a destructive overwrite.
+    Returns the number of new entries created.
+    """
+    last_day_num = cal_mod.monthrange(year, month)[1]
+    first = date(year, month, 1)
+    last = date(year, month, last_day_num)
+    upper_bound = min(last, today)
+    if upper_bound < first:
+        return 0
+    existing_days: set[date] = set(
+        (
+            await session.execute(
+                select(DayEntry.day).where(
+                    DayEntry.user_id == user_id,
+                    DayEntry.day >= first,
+                    DayEntry.day <= upper_bound,
+                ),
+            )
+        ).scalars().all(),
+    )
+    created = 0
+    d = first
+    while d <= upper_bound:
+        if d.weekday() < 5 and d not in existing_days:
+            await upsert_day_entry(
+                session, user_id=user_id, day=d, hours=_WORKWEEK_DEFAULT_HOURS,
+            )
+            created += 1
+        d += timedelta(days=1)
+    return created
 
 
 async def _build_day_view(
@@ -370,6 +422,41 @@ async def cb_nav(query: CallbackQuery, db_user: User | None = None) -> None:
                 _month_header_text(year, month), reply_markup=kb,
             )
     await query.answer()
+
+
+@router.callback_query(F.data.startswith(_FW))
+async def cb_fill_workweek(
+    query: CallbackQuery, db_user: User | None = None,
+) -> None:
+    if db_user is None or query.data is None:
+        await query.answer()
+        return
+    raw = query.data[len(_FW) :]
+    try:
+        year_s, month_s = raw.split("-")
+        year, month = int(year_s), int(month_s)
+    except ValueError:
+        await query.answer()
+        return
+    if not (1 <= month <= 12):
+        await query.answer()
+        return
+    today = _today_local()
+    async for session in get_session():
+        created = await _bulk_fill_workweek(
+            session, user_id=db_user.id, year=year, month=month, today=today,
+        )
+        await session.commit()
+        kb = await _build_month_keyboard(
+            session, user_id=db_user.id, year=year, month=month,
+        )
+    if isinstance(query.message, Message):
+        with contextlib.suppress(Exception):
+            await query.message.edit_text(
+                _month_header_text(year, month), reply_markup=kb,
+            )
+    note = t("cal_fill_result", n=created) if created else t("cal_fill_none")
+    await query.answer(note, show_alert=False)
 
 
 @router.callback_query(F.data.startswith(_DAY))

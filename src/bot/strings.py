@@ -501,6 +501,9 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
         # Phase 6.6 — inline calendar
         "cal_header": "📆 {month} {year}\nЖми на дату, чтобы открыть.",
         "cal_legend": "• часы  🌴 выходной  💵 аванс  💰 выплата",
+        "cal_btn_fill_workweek": "💼 Заполнить будни (8 ч)",
+        "cal_fill_result": "Добавлено будних дней: {n} × 8 ч.",
+        "cal_fill_none": "Будни уже отмечены.",
         "cal_day_header": "📅 {date}",
         "cal_day_no_entry": "Часы: не указаны",
         "cal_day_off_line": "🌴 Выходной",
