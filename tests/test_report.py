@@ -17,7 +17,7 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 from sqlalchemy.ext.compiler import compiles
-from src.bot.handlers.report import parse_months_arg
+from src.bot.handlers.report import parse_months_arg, period_png_keyboard
 from src.core.models import Advance, Crew, DayEntry, SalaryPayment, User
 from src.services import accounting as accounting_module
 from src.services.advances import SalaryBreakdown, record_advance
@@ -118,6 +118,24 @@ def test_parse_months_out_of_range_rejected() -> None:
 def test_parse_months_non_numeric_rejected() -> None:
     assert parse_months_arg("abc") is None
     assert parse_months_arg("3.5") is None
+
+
+def test_period_png_keyboard_default_has_png_only() -> None:
+    kb = period_png_keyboard(2026, 5)
+    assert len(kb.inline_keyboard) == 1
+    row = kb.inline_keyboard[0]
+    assert len(row) == 1
+    assert row[0].callback_data == "period:png:2026-05"
+
+
+def test_period_png_keyboard_with_forecast_adds_button() -> None:
+    kb = period_png_keyboard(2026, 5, with_forecast=True)
+    row = kb.inline_keyboard[0]
+    assert len(row) == 2
+    assert [b.callback_data for b in row] == [
+        "period:png:2026-05",
+        "period:fc:2026-05",
+    ]
 
 
 # --- get_report_data ---------------------------------------------------

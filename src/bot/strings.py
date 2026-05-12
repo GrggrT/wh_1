@@ -569,6 +569,7 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
         "report_menu_12m": "12 мес",
         "report_menu_24m": "24 мес",
         "period_btn_png": "📈 График",
+        "period_btn_forecast": "🔮 Прогноз",
         # Phase 7.1 — full XLSX backup
         "backup_caption": (
             "📦 Резервная копия\n"

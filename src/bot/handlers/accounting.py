@@ -313,13 +313,17 @@ async def _send_period(
     from src.bot.handlers.report import period_png_keyboard
 
     tz = ZoneInfo(get_settings().timezone)
+    cur_y, cur_m = _current_year_month(tz)
+    is_current = (year, month) == (cur_y, cur_m)
     async for session in get_session():
         ledger = await get_period_ledger(
             session, user=db_user, year=year, month=month, tz=tz,
         )
     await message.answer(
         format_period(ledger, db_user),
-        reply_markup=period_png_keyboard(year, month),
+        reply_markup=period_png_keyboard(
+            year, month, with_forecast=is_current,
+        ),
     )
 
 

@@ -49,6 +49,7 @@ _PDF_CB_PREFIX = "report:pdf:"
 _PNG_CB_PREFIX = "report:png:"
 _RUN_CB_PREFIX = "report:run:"
 _PERIOD_PNG_CB_PREFIX = "period:png:"  # PNG for a single (year, month)
+_PERIOD_FC_CB_PREFIX = "period:fc:"  # forecast for a single (year, month)
 
 _MENU_WINDOWS: tuple[int, ...] = (3, 6, 12, 24)
 
@@ -69,18 +70,28 @@ def parse_months_arg(raw: str | None) -> int | None:
     return n
 
 
-def period_png_keyboard(year: int, month: int) -> InlineKeyboardMarkup:
-    """Single-button keyboard offering a PNG chart for ``(year, month)``."""
-    return InlineKeyboardMarkup(
-        inline_keyboard=[
-            [
-                InlineKeyboardButton(
-                    text=t("period_btn_png"),
-                    callback_data=f"{_PERIOD_PNG_CB_PREFIX}{year}-{month:02d}",
-                ),
-            ],
-        ],
-    )
+def period_png_keyboard(
+    year: int, month: int, *, with_forecast: bool = False,
+) -> InlineKeyboardMarkup:
+    """Inline keyboard for a ``(year, month)`` period response.
+
+    Always shows the PNG button. When ``with_forecast`` is true (caller's
+    responsibility: only for the current month) also shows «🔮 Прогноз».
+    """
+    row: list[InlineKeyboardButton] = [
+        InlineKeyboardButton(
+            text=t("period_btn_png"),
+            callback_data=f"{_PERIOD_PNG_CB_PREFIX}{year}-{month:02d}",
+        ),
+    ]
+    if with_forecast:
+        row.append(
+            InlineKeyboardButton(
+                text=t("period_btn_forecast"),
+                callback_data=f"{_PERIOD_FC_CB_PREFIX}{year}-{month:02d}",
+            ),
+        )
+    return InlineKeyboardMarkup(inline_keyboard=[row])
 
 
 def report_menu_keyboard() -> InlineKeyboardMarkup:
@@ -269,6 +280,42 @@ async def cb_period_png(
         buf.getvalue(), filename=f"period_{year}-{month:02d}.png",
     )
     await callback.message.answer_document(document)
+    await callback.answer()
+
+
+@router.callback_query(
+    lambda cq: (cq.data or "").startswith(_PERIOD_FC_CB_PREFIX),
+)
+async def cb_period_forecast(
+    callback: CallbackQuery, db_user: User | None = None,
+) -> None:
+    """Reply with the month-end forecast for the requested (year, month)."""
+    if db_user is None or callback.data is None or callback.message is None:
+        await callback.answer()
+        return
+    arg = callback.data[len(_PERIOD_FC_CB_PREFIX):]
+    try:
+        year = int(arg[:4])
+        month = int(arg[5:7])
+    except (ValueError, IndexError):
+        await callback.answer()
+        return
+    if not (1 <= month <= 12):
+        await callback.answer()
+        return
+
+    from src.bot.handlers.accounting import format_forecast
+    from src.services.forecast import compute_forecast
+
+    tz = ZoneInfo(get_settings().timezone)
+    today = datetime.now(tz=tz).date()
+    async for session in get_session():
+        fc = await compute_forecast(
+            session, user=db_user,
+            year=year, month=month,
+            today=today, tz=tz,
+        )
+    await callback.message.answer(format_forecast(fc, db_user.currency))
     await callback.answer()
 
 
