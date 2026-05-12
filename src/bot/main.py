@@ -21,6 +21,7 @@ from src.bot.handlers import (
     day_entries,
     exports,
     geofence_edit,
+    nl_router,
     notes,
     onboarding,
     profile,
@@ -318,6 +319,9 @@ async def main() -> None:
     dp.include_router(report.router)
     dp.include_router(calendar_handler.router)
     dp.include_router(settings_handler.router)
+    # NL dispatcher must stay last: it catches any leftover plain text
+    # and forwards to /report, /period, /cash, /owed.
+    dp.include_router(nl_router.router)
 
     _register_error_handler(dp, bot, settings)
 
