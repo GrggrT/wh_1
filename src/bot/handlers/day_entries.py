@@ -217,7 +217,9 @@ async def cmd_remind_on(
         # Reset idempotency so a same-day re-arm fires today if hour is reached.
         user.day_reminder_last_sent = None
         await session.commit()
-    await message.answer(t("remind_on_ok", hour=f"{hour:02d}"))
+    await message.answer(
+        t("remind_on_ok", hour=f"{hour:02d}"), parse_mode="HTML",
+    )
 
 
 @router.message(Command("remind_off"))

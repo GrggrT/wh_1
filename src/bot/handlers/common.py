@@ -1,5 +1,7 @@
 """Common handlers: /start, /help, /cancel, /menu + reply-keyboard text buttons."""
 
+from html import escape as _esc
+
 from aiogram import F, Router
 from aiogram.filters import Command
 from aiogram.filters.command import CommandObject
@@ -56,8 +58,9 @@ async def cmd_start(
     snap = await _snapshot()
     user_name = message.from_user.full_name if message.from_user else "User"
     await message.answer(
-        t("welcome", name=user_name),
+        t("welcome", name=_esc(user_name)),
         reply_markup=simple_menu(snap, _role(db_user)),
+        parse_mode="HTML",
     )
 
 
@@ -73,7 +76,9 @@ async def cmd_menu(
 ) -> None:
     snap = await _snapshot()
     await message.answer(
-        t("menu_hint"), reply_markup=simple_menu(snap, _role(db_user)),
+        t("menu_hint"),
+        reply_markup=simple_menu(snap, _role(db_user)),
+        parse_mode="HTML",
     )
 
 

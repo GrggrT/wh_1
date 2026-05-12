@@ -4,7 +4,7 @@ from typing import Final
 
 STRINGS: Final[dict[str, dict[str, str]]] = {
     "ru": {
-        "welcome": "Привет, {name}! Я бот для учёта рабочего времени на стройке.",
+        "welcome": "Привет, <b>{name}</b>! Я бот для учёта рабочего времени на стройке.",
         "help": (
             "Команды:\n"
             "/start — начало работы\n"
@@ -106,7 +106,7 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
         "shift_stopped_with_amount": (
             "Смена закрыта. {hours} ч. на объекте «{site}». Сумма: {amount} zl."
         ),
-        "cancelled": "Действие отменено.",
+        "cancelled": "❎ Действие отменено.",
         "no_shifts_today": "Сегодня смен не было.",
         "no_shifts_yesterday": "Вчера смен не было.",
         "yesterday_summary": "Вчера: {hours} ч. ({count} смен)",
@@ -437,14 +437,15 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
         ),
         "remind_bad_hour": "⚠ Час должен быть числом от 0 до 23.",
         "remind_on_ok": (
-            "Вечернее напоминание включено: в {hour}:00 по твоему часовому поясу."
+            "✅ Вечернее напоминание включено: в <b>{hour}:00</b> "
+            "по твоему часовому поясу."
         ),
-        "remind_off_ok": "Вечернее напоминание выключено.",
+        "remind_off_ok": "✅ Вечернее напоминание выключено.",
         # Phase 5.4 — feature toggles
         "settings_header": (
             "Настройки бота. Нажми, чтобы переключить:"
         ),
-        "settings_saved": "Сохранено.",
+        "settings_saved": "✅ Сохранено.",
         "settings_label_sites_enabled": "Объекты",
         "settings_label_crews_enabled": "Бригады",
         "settings_label_geofence_enabled": "Геозоны",
@@ -460,7 +461,7 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
         ),
         "onb_name_use_tg_btn": "Оставить «{tg_name}»",
         "onb_name_bad": "⚠ Имя пустое. Пришли текстом или жми кнопку ниже.",
-        "onb_name_saved": "Имя: {name}",
+        "onb_name_saved": "✅ Имя: <b>{name}</b>",
         "onb_currency_prompt": (
             "В какой валюте считаем зарплату? "
             "Выбери ниже или пришли код из 3 букв (например: PLN, USD, EUR)."
@@ -469,7 +470,7 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
             "⚠ Код валюты — 3 латинские буквы (например, PLN).\n"
             "Попробуй ещё или жми кнопку."
         ),
-        "onb_currency_saved": "Валюта: {currency}.",
+        "onb_currency_saved": "✅ Валюта: <b>{currency}</b>.",
         "onb_rate_prompt": (
             "Какая у тебя ставка за час в {currency}? "
             "Например: 35 или 42.5\n"
@@ -480,16 +481,16 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
             "⚠ Не понял сумму. Пример: 35 или 42.5.\n"
             "Или жми «Пропустить»."
         ),
-        "onb_rate_saved": "Ставка: {rate} {currency}/ч",
-        "onb_rate_skipped": "Ставку пропустили.",
+        "onb_rate_saved": "✅ Ставка: <b>{rate} {currency}/ч</b>",
+        "onb_rate_skipped": "✅ Ставку пропустили.",
         "onb_reminder_prompt": (
             "Хочешь, я буду напоминать вечером поставить часы?"
         ),
         "onb_reminder_btn_19": "В 19:00",
         "onb_reminder_btn_20": "В 20:00",
         "onb_reminder_btn_no": "Не нужно",
-        "onb_reminder_saved": "Напомню в {hour}:00.",
-        "onb_reminder_skipped": "Без напоминаний — окей.",
+        "onb_reminder_saved": "✅ Напомню в <b>{hour}:00</b>.",
+        "onb_reminder_skipped": "✅ Без напоминаний — окей.",
         "onb_done": (
             "Готово! Используй кнопки ниже:\n"
             "🕒 Часы за сегодня — поставить часы\n"
@@ -510,13 +511,13 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
         "menu_btn_cash": "💸 Касса",
         "menu_btn_reports": "📈 Отчёты",
         "menu_btn_profile": "⚙ Профиль",
-        "menu_hint": "Главное меню. Жми кнопки или /help.",
+        "menu_hint": "<b>Главное меню.</b> Жми кнопки или /help.",
         # Phase 6.6 — inline calendar
         "cal_header": "<b>📆 {month} {year}</b>\nЖми на дату, чтобы открыть.",
         "cal_legend": "• часы  🌴 выходной  💵 аванс  💰 выплата",
         "cal_btn_fill_workweek": "💼 Заполнить будни (10 ч)",
-        "cal_fill_result": "Добавлено будних дней: {n} × 10 ч.",
-        "cal_fill_none": "Будни уже отмечены.",
+        "cal_fill_result": "✅ Добавлено будних дней: {n} × 10 ч.",
+        "cal_fill_none": "ℹ Будни уже отмечены.",
         "cal_day_header": "<b>📅 {date}</b>",
         "cal_day_no_entry": "Часы: не указаны",
         "cal_day_off_line": "🌴 Выходной",
@@ -794,14 +795,14 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
         "profile_btn_close": "Закрыть",
         "profile_name_prompt": "Пришли новое имя. /cancel — отмена.",
         "profile_name_bad": "⚠ Имя пустое. Пришли текстом или /cancel.",
-        "profile_name_saved": "Имя обновлено: {name}.",
+        "profile_name_saved": "✅ Имя обновлено: <b>{name}</b>.",
         "profile_rate_prompt": (
             "Пришли новую ставку за час в {currency}. Например: 35 или 42.5\n"
             "Чтобы убрать ставку — пришли «-». /cancel — отмена."
         ),
         "profile_rate_bad": "⚠ Не понял сумму. Пример: 35 или 42.5, или «-».",
-        "profile_rate_saved": "Ставка обновлена: {rate} {currency}/ч.",
-        "profile_rate_cleared": "Ставка убрана.",
+        "profile_rate_saved": "✅ Ставка обновлена: <b>{rate} {currency}/ч</b>.",
+        "profile_rate_cleared": "✅ Ставка убрана.",
         "profile_currency_prompt": (
             "Пришли код валюты (3 буквы), например: PLN, USD, EUR, RUB, BYN, UAH.\n"
             "/cancel — отмена."
@@ -809,12 +810,12 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
         "profile_currency_bad": (
             "⚠ Код валюты — 3 латинские буквы (например, PLN). Попробуй ещё."
         ),
-        "profile_currency_saved": "Валюта обновлена: {currency}.",
+        "profile_currency_saved": "✅ Валюта обновлена: <b>{currency}</b>.",
         "profile_reminder_prompt": (
             "Когда напоминать поставить часы?"
         ),
         "profile_reminder_btn_off": "Не нужно",
-        "profile_reminder_saved": "Напоминание: {value}.",
+        "profile_reminder_saved": "✅ Напоминание: <b>{value}</b>.",
         "profile_timezone_default": "по умолчанию",
         "profile_timezone_prompt": (
             "Выбери часовой пояс из списка или пришли IANA-имя "
@@ -824,8 +825,8 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
         "profile_timezone_bad": (
             "⚠ Неизвестный часовой пояс. Пример: Europe/Warsaw."
         ),
-        "profile_timezone_saved": "Часовой пояс: {tz}.",
-        "profile_timezone_cleared": "Часовой пояс сброшен на значение по умолчанию.",
+        "profile_timezone_saved": "✅ Часовой пояс: <b>{tz}</b>.",
+        "profile_timezone_cleared": "✅ Часовой пояс сброшен на значение по умолчанию.",
         "profile_closed": "Закрыто.",
         # Phase 5.5 — cutover
         "feature_disabled": (

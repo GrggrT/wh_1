@@ -15,6 +15,7 @@ wizard since the column stayed NULL.
 from __future__ import annotations
 
 import re
+from html import escape as _esc
 
 from aiogram import F, Router
 from aiogram.filters import Command
@@ -160,7 +161,7 @@ async def _accept_name(
     target = source.message if isinstance(source, CallbackQuery) else source
     if target is None:
         return
-    await target.answer(t("onb_name_saved", name=name))
+    await target.answer(t("onb_name_saved", name=_esc(name)), parse_mode="HTML")
     await target.answer(
         t("onb_currency_prompt"), reply_markup=_currency_keyboard(),
     )
@@ -176,7 +177,7 @@ async def _accept_currency(
     target = source.message if isinstance(source, CallbackQuery) else source
     if target is None:
         return
-    await target.answer(t("onb_currency_saved", currency=currency))
+    await target.answer(t("onb_currency_saved", currency=currency), parse_mode="HTML")
     await target.answer(
         t("onb_rate_prompt", currency=currency), reply_markup=_rate_keyboard(),
     )
@@ -233,7 +234,10 @@ async def msg_rate(
     await state.update_data(rate=str(rate))
     data = await state.get_data()
     currency = str(data.get("currency") or (db_user.currency if db_user else "PLN"))
-    await message.answer(t("onb_rate_saved", rate=str(rate), currency=currency))
+    await message.answer(
+        t("onb_rate_saved", rate=str(rate), currency=currency),
+        parse_mode="HTML",
+    )
     await state.set_state(Onboarding.awaiting_reminder)
     await message.answer(
         t("onb_reminder_prompt"), reply_markup=_reminder_keyboard(),
@@ -300,7 +304,9 @@ async def _finish(
     if hour is None:
         await target.answer(t("onb_reminder_skipped"))
     else:
-        await target.answer(t("onb_reminder_saved", hour=f"{hour:02d}"))
+        await target.answer(
+            t("onb_reminder_saved", hour=f"{hour:02d}"), parse_mode="HTML",
+        )
     await target.answer(
         t("onb_done"), reply_markup=simple_menu(snap, db_user.role),
     )
