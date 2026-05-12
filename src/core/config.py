@@ -22,6 +22,8 @@ class Settings(BaseSettings):
     supabase_url: str = ""
     supabase_service_role_key: str = ""
     supabase_storage_bucket: str = "shift-photos"
+    # Separate bucket for /backup_to_cloud XLSX snapshots.
+    supabase_backups_bucket: str = "backups"
 
     # Daily digest delivered to owner_tg_id
     daily_digest_enabled: bool = True

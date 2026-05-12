@@ -34,6 +34,12 @@ from src.bot.strings import t
 from src.core.config import get_settings
 from src.core.db import get_session
 from src.core.models import Advance, DayEntry, SalaryPayment, User
+from src.services.backup_cloud import (
+    CloudBackupError,
+    cloud_storage_enabled,
+    fetch_cloud_backup,
+    register_cloud_backup,
+)
 from src.services.reports.backup import backup_filename, build_backup_xlsx
 from src.services.reports.restore import (
     BackupParseError,
@@ -291,6 +297,125 @@ async def cmd_share_backup(
             "share_backup_issued",
             token=issued.token,
             expires=issued.expires_at.strftime("%Y-%m-%d %H:%M UTC"),
+        ),
+    )
+
+
+@router.message(Command("backup_to_cloud"))
+async def cmd_backup_to_cloud(
+    message: Message, db_user: User | None = None,
+) -> None:
+    """Build a backup XLSX and stash it in object storage; return a key."""
+    if db_user is None:
+        return
+    settings = get_settings()
+    if not cloud_storage_enabled(settings):
+        await message.answer(t("cloud_backup_disabled"))
+        return
+    tz = ZoneInfo(settings.timezone)
+    today = datetime.now(tz=tz).date()
+    async for session in get_session():
+        days = (
+            await session.execute(
+                select(DayEntry)
+                .where(DayEntry.user_id == db_user.id)
+                .order_by(DayEntry.day),
+            )
+        ).scalars().all()
+        advs = (
+            await session.execute(
+                select(Advance)
+                .where(Advance.user_id == db_user.id)
+                .order_by(Advance.day),
+            )
+        ).scalars().all()
+        pays = (
+            await session.execute(
+                select(SalaryPayment)
+                .where(SalaryPayment.user_id == db_user.id)
+                .order_by(SalaryPayment.paid_on),
+            )
+        ).scalars().all()
+        buf = build_backup_xlsx(
+            db_user, list(days), list(advs), list(pays), today=today,
+        )
+        data = buf.getvalue()
+        try:
+            issued = await register_cloud_backup(
+                session, owner=db_user, data=data, settings=settings,
+            )
+        except CloudBackupError as exc:
+            await session.rollback()
+            await message.answer(
+                t("cloud_backup_failed", reason=str(exc)),
+            )
+            return
+        await session.commit()
+    logger.info(
+        "cloud_backup_uploaded",
+        user_id=db_user.id, tg_id=db_user.tg_id,
+        size_bytes=issued.size_bytes,
+    )
+    await message.answer(
+        t(
+            "cloud_backup_uploaded",
+            key=issued.key,
+            expires=issued.expires_at.strftime("%Y-%m-%d %H:%M UTC"),
+            size_kb=round(issued.size_bytes / 1024, 1),
+        ),
+    )
+
+
+@router.message(Command("restore_from_cloud"))
+async def cmd_restore_from_cloud(
+    message: Message,
+    command: CommandObject,
+    db_user: User | None = None,
+) -> None:
+    """Fetch a cloud-stashed backup by key and apply it to the caller."""
+    if db_user is None:
+        return
+    key = (command.args or "").strip()
+    if not key:
+        await message.answer(t("restore_from_cloud_usage"))
+        return
+    settings = get_settings()
+    if not cloud_storage_enabled(settings):
+        await message.answer(t("cloud_backup_disabled"))
+        return
+    async for session in get_session():
+        try:
+            raw = await fetch_cloud_backup(
+                session, key=key, settings=settings,
+            )
+        except CloudBackupError as exc:
+            await message.answer(
+                t("restore_from_cloud_failed", reason=str(exc)),
+            )
+            return
+        try:
+            plan = parse_backup_xlsx(BytesIO(raw))
+        except BackupParseError as exc:
+            await message.answer(t("restore_failed", error=str(exc)))
+            return
+        result = await apply_restore(session, user=db_user, plan=plan)
+        await session.commit()
+    logger.info(
+        "cloud_backup_restored",
+        user_id=db_user.id, tg_id=db_user.tg_id,
+        days_inserted=result.days_inserted,
+        days_skipped=result.days_skipped,
+        advances_inserted=result.advances_inserted,
+        advances_skipped=result.advances_skipped,
+        payments_inserted=result.payments_inserted,
+        payments_skipped=result.payments_skipped,
+    )
+    await message.answer(
+        t(
+            "restore_done",
+            days_in=result.days_inserted, days_skip=result.days_skipped,
+            adv_in=result.advances_inserted, adv_skip=result.advances_skipped,
+            pay_in=result.payments_inserted, pay_skip=result.payments_skipped,
         ),
     )
 

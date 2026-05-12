@@ -142,6 +142,14 @@ _CORE_COMMANDS: list[BotCommand] = [
         command="restore_from",
         description="Принять данные по коду",
     ),
+    BotCommand(
+        command="backup_to_cloud",
+        description="Сохранить бэкап в облако",
+    ),
+    BotCommand(
+        command="restore_from_cloud",
+        description="Восстановить бэкап из облака",
+    ),
     BotCommand(command="my_days", description="Мои последние 14 дней"),
     BotCommand(command="profile", description="Профиль: имя, ставка, валюта, напоминание"),
     BotCommand(command="my_rate", description="Моя ставка"),

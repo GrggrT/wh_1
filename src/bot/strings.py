@@ -622,6 +622,26 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
         "restore_from_failed": (
             "Не получилось применить код: {reason}."
         ),
+        "cloud_backup_disabled": (
+            "Облачное хранилище не настроено — обратись к владельцу."
+        ),
+        "cloud_backup_uploaded": (
+            "☁ Бэкап загружен в облако.\n"
+            "Ключ: {key}\n"
+            "Размер: {size_kb} КБ\n"
+            "Действует до {expires}.\n"
+            "Восстановить: /restore_from_cloud <ключ>."
+        ),
+        "cloud_backup_failed": (
+            "Не получилось загрузить в облако: {reason}."
+        ),
+        "restore_from_cloud_usage": (
+            "Используй: /restore_from_cloud <ключ>\n"
+            "Ключ выдаёт /backup_to_cloud."
+        ),
+        "restore_from_cloud_failed": (
+            "Не получилось вытащить бэкап из облака: {reason}."
+        ),
         # Phase 7.2 — smart reminders
         "gap_nudge_with_last": (
             "👋 Давно не виделись. Последняя запись часов: {last_day}.\n"
