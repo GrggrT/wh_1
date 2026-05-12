@@ -156,6 +156,39 @@ def quick_pick_values(
     return [suggested, *deduped]
 
 
+def personalized_picks(
+    entries: list[DayEntry],
+    suggested: Decimal | None = None,
+    max_items: int = 6,
+) -> list[Decimal]:
+    """Build a quick-pick row tailored to the user's recent history.
+
+    Ordering: ``suggested`` (if any) → recent unique non-day-off values
+    from ``entries`` (newest first) → static ``QUICK_HOURS`` to fill up
+    to ``max_items`` slots. Duplicates are dropped.
+    """
+    seen: set[Decimal] = set()
+    result: list[Decimal] = []
+    if suggested is not None and suggested > 0:
+        result.append(suggested)
+        seen.add(suggested)
+    for e in entries:
+        if e.hours <= 0 or e.hours in seen:
+            continue
+        result.append(e.hours)
+        seen.add(e.hours)
+        if len(result) >= max_items:
+            return result
+    for v in QUICK_HOURS:
+        if v in seen:
+            continue
+        result.append(v)
+        seen.add(v)
+        if len(result) >= max_items:
+            return result
+    return result
+
+
 def format_hours(value: Decimal) -> str:
     """Pretty-print hours: drop trailing zeros, "8" instead of "8.00"."""
     normalized = value.normalize()

@@ -17,6 +17,7 @@ from src.services.day_entries import (
     format_hours,
     is_day_off,
     parse_hours,
+    personalized_picks,
     quick_pick_values,
     smart_suggest,
 )
@@ -130,6 +131,54 @@ def test_quick_pick_with_novel_suggestion_prepends() -> None:
     picks = quick_pick_values(Decimal("11"))
     assert picks[0] == Decimal("11")
     assert len(picks) == len(QUICK_HOURS) + 1
+
+
+# ---- personalized_picks ----------------------------------------------------
+
+
+def test_personalized_picks_empty_history_falls_back_to_defaults() -> None:
+    assert personalized_picks([]) == list(QUICK_HOURS)
+
+
+def test_personalized_picks_with_suggested_first() -> None:
+    picks = personalized_picks([], Decimal("11"))
+    assert picks[0] == Decimal("11")
+
+
+def test_personalized_picks_promotes_recent_unique_values() -> None:
+    entries = [
+        _entry("11", 0),
+        _entry("11", 1),  # duplicate — dropped
+        _entry("13", 2),
+        _entry("0", 3),  # day-off — skipped
+        _entry("9", 4),
+    ]
+    picks = personalized_picks(entries, max_items=4)
+    # Recent unique values first (newest-first), then defaults fill in.
+    assert picks[0] == Decimal("11")
+    assert picks[1] == Decimal("13")
+    assert picks[2] == Decimal("9")
+    assert len(picks) == 4
+
+
+def test_personalized_picks_dedupes_against_suggested() -> None:
+    entries = [_entry("8", 0), _entry("9", 1)]
+    picks = personalized_picks(entries, Decimal("8"))
+    assert picks.count(Decimal("8")) == 1
+    assert picks[0] == Decimal("8")
+
+
+def test_personalized_picks_respects_max_items() -> None:
+    entries = [_entry("11", 0), _entry("13", 1), _entry("9", 2)]
+    picks = personalized_picks(entries, Decimal("8"), max_items=3)
+    assert picks == [Decimal("8"), Decimal("11"), Decimal("13")]
+
+
+def test_personalized_picks_skips_day_off_values() -> None:
+    entries = [_entry("0", 0), _entry("0", 1)]
+    picks = personalized_picks(entries)
+    assert all(v > 0 for v in picks)
+    assert picks == list(QUICK_HOURS)
 
 
 # ---- format_hours ----------------------------------------------------------

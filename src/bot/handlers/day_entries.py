@@ -24,7 +24,7 @@ from src.services.day_entries import (
     is_day_off,
     list_recent_entries,
     parse_hours,
-    quick_pick_values,
+    personalized_picks,
     smart_suggest,
     upsert_day_entry,
 )
@@ -141,7 +141,7 @@ async def cmd_h(
     async for session in get_session():
         recent = await list_recent_entries(session, user_id=db_user.id, days=14)
     suggested = smart_suggest(recent)
-    picks = quick_pick_values(suggested)
+    picks = personalized_picks(recent, suggested)
     prompt = (
         t("h_prompt_with_suggest", suggest=format_hours(suggested))
         if suggested is not None
