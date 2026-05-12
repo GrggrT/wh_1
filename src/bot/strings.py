@@ -680,6 +680,21 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
             "к концу месяца."
         ),
         "forecast_remaining_hours": "Осталось добрать ~{hours} ч.",
+        # Phase 7.x — /range
+        "range_usage": (
+            "Используй: /range YYYY-MM-DD YYYY-MM-DD\n"
+            "Пример: /range 2026-05-01 2026-05-15"
+        ),
+        "range_bad_format": (
+            "Не понял даты. Формат: /range YYYY-MM-DD YYYY-MM-DD."
+        ),
+        "range_header": "🧮 Период {start} … {end}",
+        "range_hours": "Часы: {hours} ч за {days} дн.",
+        "range_earnings": "Заработано: {earnings} {currency}.",
+        "range_no_rate": (
+            "Ставка не задана — рассчитать заработок не могу. "
+            "Установи в /profile."
+        ),
         # Phase 6.9 — /profile editor
         "profile_header": (
             "⚙ Профиль\n"

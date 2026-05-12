@@ -44,6 +44,7 @@ from src.services.accounting import (
 from src.services.advances import month_bounds, parse_year_month
 from src.services.day_entries import format_hours
 from src.services.forecast import Forecast, compute_forecast
+from src.services.range_sum import RangeSum, compute_range_sum, parse_iso_date
 
 router = Router()
 
@@ -481,3 +482,55 @@ async def cmd_forecast(
             today=today, tz=tz,
         )
     await message.answer(format_forecast(fc, db_user.currency))
+
+
+def format_range_sum(rs: RangeSum, currency: str) -> str:
+    lines = [
+        t(
+            "range_header",
+            start=rs.start.isoformat(),
+            end=rs.end.isoformat(),
+        ),
+        t(
+            "range_hours",
+            hours=format_hours(rs.total_hours),
+            days=rs.days_with_hours,
+        ),
+    ]
+    if rs.total_earnings is None:
+        lines.append(t("range_no_rate"))
+    else:
+        lines.append(
+            t(
+                "range_earnings",
+                earnings=_fmt_money(rs.total_earnings),
+                currency=currency,
+            ),
+        )
+    return "\n".join(lines)
+
+
+@router.message(Command("range"))
+async def cmd_range(
+    message: Message, command: CommandObject, db_user: User | None = None,
+) -> None:
+    """``/range YYYY-MM-DD YYYY-MM-DD`` — sum hours + earnings in a window."""
+    if db_user is None:
+        return
+    raw = (command.args or "").strip()
+    parts = raw.split()
+    if len(parts) != 2:
+        await message.answer(t("range_usage"))
+        return
+    start = parse_iso_date(parts[0])
+    end = parse_iso_date(parts[1])
+    if start is None or end is None:
+        await message.answer(t("range_bad_format"))
+        return
+    if end < start:
+        start, end = end, start
+    async for session in get_session():
+        rs = await compute_range_sum(
+            session, user=db_user, start=start, end=end,
+        )
+    await message.answer(format_range_sum(rs, db_user.currency))
