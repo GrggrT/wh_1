@@ -20,6 +20,7 @@ class GeofenceEdit(StatesGroup):
 
 class Onboarding(StatesGroup):
     awaiting_name = State()
+    awaiting_currency = State()
     awaiting_rate = State()
     awaiting_reminder = State()
 

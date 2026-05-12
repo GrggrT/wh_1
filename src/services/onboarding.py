@@ -35,6 +35,7 @@ async def complete_onboarding(
     name: str,
     hourly_rate: Decimal | None,
     remind_hour_local: int | None,
+    currency: str | None = None,
 ) -> User:
     """Persist the wizard outcome on the user row.
 
@@ -47,6 +48,8 @@ async def complete_onboarding(
     cleaned = name.strip()
     if cleaned:
         user.name = cleaned[:80]
+    if currency is not None:
+        user.currency = currency
     if hourly_rate is not None:
         user.hourly_rate = hourly_rate
     if remind_hour_local is not None:

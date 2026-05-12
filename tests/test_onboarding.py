@@ -96,6 +96,22 @@ async def test_complete_onboarding_writes_all_fields(
     assert updated.onboarded_at is not None
 
 
+async def test_complete_onboarding_persists_currency(
+    session: AsyncSession,
+) -> None:
+    user = await _seed_user(session)
+    assert user.currency == "PLN"  # server default
+    updated = await complete_onboarding(
+        session,
+        user_id=user.id,
+        name="Alice",
+        hourly_rate=Decimal("35.00"),
+        remind_hour_local=None,
+        currency="USD",
+    )
+    assert updated.currency == "USD"
+
+
 async def test_complete_onboarding_truncates_long_name(
     session: AsyncSession,
 ) -> None:

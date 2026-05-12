@@ -14,6 +14,8 @@ wizard since the column stayed NULL.
 
 from __future__ import annotations
 
+import re
+
 from aiogram import F, Router
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
@@ -37,8 +39,12 @@ router = Router()
 
 # Callback-data namespaces. Telegram limits callback_data to 64 bytes.
 _CB_NAME_USE_TG = "onb:name:tg"
+_CB_CURRENCY = "onb:cur:"  # onb:cur:PLN, onb:cur:USD, ...
 _CB_RATE_SKIP = "onb:rate:skip"
 _CB_REMIND = "onb:rmd:"  # onb:rmd:19, onb:rmd:20, onb:rmd:no
+
+_CURRENCY_PRESETS: tuple[str, ...] = ("PLN", "USD", "EUR", "RUB", "BYN", "UAH")
+_CURRENCY_RE = re.compile(r"^[A-Za-z]{3}$")
 
 
 def _name_keyboard(tg_name: str) -> InlineKeyboardMarkup:
@@ -52,6 +58,15 @@ def _name_keyboard(tg_name: str) -> InlineKeyboardMarkup:
             ],
         ],
     )
+
+
+def _currency_keyboard() -> InlineKeyboardMarkup:
+    btns = [
+        InlineKeyboardButton(text=cur, callback_data=f"{_CB_CURRENCY}{cur}")
+        for cur in _CURRENCY_PRESETS
+    ]
+    rows = [btns[i : i + 3] for i in range(0, len(btns), 3)]
+    return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
 def _rate_keyboard() -> InlineKeyboardMarkup:
@@ -140,15 +155,57 @@ async def _accept_name(
     name: str,
     currency: str = "PLN",
 ) -> None:
-    await state.update_data(name=name)
-    await state.set_state(Onboarding.awaiting_rate)
+    await state.update_data(name=name, currency=currency)
+    await state.set_state(Onboarding.awaiting_currency)
     target = source.message if isinstance(source, CallbackQuery) else source
     if target is None:
         return
     await target.answer(t("onb_name_saved", name=name))
     await target.answer(
+        t("onb_currency_prompt"), reply_markup=_currency_keyboard(),
+    )
+
+
+async def _accept_currency(
+    source: Message | CallbackQuery,
+    state: FSMContext,
+    currency: str,
+) -> None:
+    await state.update_data(currency=currency)
+    await state.set_state(Onboarding.awaiting_rate)
+    target = source.message if isinstance(source, CallbackQuery) else source
+    if target is None:
+        return
+    await target.answer(t("onb_currency_saved", currency=currency))
+    await target.answer(
         t("onb_rate_prompt", currency=currency), reply_markup=_rate_keyboard(),
     )
+
+
+@router.callback_query(Onboarding.awaiting_currency, F.data.startswith(_CB_CURRENCY))
+async def cb_currency_pick(
+    query: CallbackQuery, state: FSMContext,
+) -> None:
+    if query.data is None:
+        await query.answer()
+        return
+    currency = query.data[len(_CB_CURRENCY):].upper()
+    if not _CURRENCY_RE.fullmatch(currency):
+        await query.answer()
+        return
+    await _accept_currency(query, state, currency)
+    await query.answer()
+
+
+@router.message(Onboarding.awaiting_currency, F.text)
+async def msg_currency(
+    message: Message, state: FSMContext,
+) -> None:
+    raw = (message.text or "").strip().upper()
+    if not _CURRENCY_RE.fullmatch(raw):
+        await message.answer(t("onb_currency_bad"))
+        return
+    await _accept_currency(message, state, raw)
 
 
 @router.callback_query(Onboarding.awaiting_rate, F.data == _CB_RATE_SKIP)
@@ -174,7 +231,8 @@ async def msg_rate(
         await message.answer(t("onb_rate_bad"))
         return
     await state.update_data(rate=str(rate))
-    currency = db_user.currency if db_user else "PLN"
+    data = await state.get_data()
+    currency = str(data.get("currency") or (db_user.currency if db_user else "PLN"))
     await message.answer(t("onb_rate_saved", rate=str(rate), currency=currency))
     await state.set_state(Onboarding.awaiting_reminder)
     await message.answer(
@@ -219,6 +277,8 @@ async def _finish(
     name = str(data.get("name") or db_user.name)
     rate_raw = data.get("rate")
     rate = Decimal(str(rate_raw)) if rate_raw is not None else None
+    currency_raw = data.get("currency")
+    currency = str(currency_raw) if currency_raw else None
 
     target = source.message if isinstance(source, CallbackQuery) else source
     if target is None:
@@ -231,6 +291,7 @@ async def _finish(
             name=name,
             hourly_rate=rate,
             remind_hour_local=hour,
+            currency=currency,
         )
         snap = await get_app_settings(session)
         await session.commit()
