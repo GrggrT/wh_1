@@ -19,6 +19,7 @@ from src.bot.handlers.accounting import (
     cmd_forecast,
     cmd_owed,
     cmd_period,
+    cmd_range,
 )
 from src.bot.handlers.report import cmd_report
 from src.core.config import get_settings
@@ -50,6 +51,16 @@ async def nl_dispatch(
     if intent is None:
         return
 
+    if intent.kind == "range" and intent.start and intent.end:
+        await cmd_range(
+            message,
+            CommandObject(
+                prefix="/", command="range",
+                args=f"{intent.start.isoformat()} {intent.end.isoformat()}",
+            ),
+            db_user=db_user,
+        )
+        return
     if intent.kind == "owed":
         await cmd_owed(message, db_user=db_user)
         return

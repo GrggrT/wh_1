@@ -170,3 +170,54 @@ def test_yo_or_e_letter_variants() -> None:
     intent = parse_intent("отчет", today=_TODAY)
     assert intent is not None
     assert intent.kind == "report"
+
+
+# --- range ------------------------------------------------------------
+
+
+def test_range_iso_pair() -> None:
+    intent = parse_intent("2026-05-01 2026-05-15", today=_TODAY)
+    assert intent is not None
+    assert intent.kind == "range"
+    assert intent.start == date(2026, 5, 1)
+    assert intent.end == date(2026, 5, 15)
+
+
+def test_range_iso_pair_with_separator() -> None:
+    intent = parse_intent("с 2026-04-01 по 2026-04-15", today=_TODAY)
+    assert intent is not None
+    assert intent.kind == "range"
+    assert intent.start == date(2026, 4, 1)
+    assert intent.end == date(2026, 4, 15)
+
+
+def test_range_day_range_with_month_name() -> None:
+    intent = parse_intent("сколько за май 1-15", today=_TODAY)
+    assert intent is not None
+    assert intent.kind == "range"
+    assert intent.start == date(2026, 5, 1)
+    assert intent.end == date(2026, 5, 15)
+
+
+def test_range_с_по_with_month_name() -> None:
+    intent = parse_intent("с 1 по 15 мая", today=_TODAY)
+    assert intent is not None
+    assert intent.kind == "range"
+    assert intent.start == date(2026, 5, 1)
+    assert intent.end == date(2026, 5, 15)
+
+
+def test_range_swap_if_reversed() -> None:
+    intent = parse_intent("2026-05-15 2026-05-01", today=_TODAY)
+    assert intent is not None
+    assert intent.kind == "range"
+    assert intent.start == date(2026, 5, 1)
+    assert intent.end == date(2026, 5, 15)
+
+
+def test_range_invalid_day_falls_through() -> None:
+    """40 days in May → no range detected (day out of range)."""
+    intent = parse_intent("с 1 по 40 мая", today=_TODAY)
+    # Should not crash; either None or non-range intent is acceptable.
+    if intent is not None:
+        assert intent.kind != "range"

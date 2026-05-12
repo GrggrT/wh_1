@@ -9,6 +9,7 @@ deterministically (e.g. «декабрь» said in May 2026 → December 2025).
 
 from __future__ import annotations
 
+import calendar
 import re
 from dataclasses import dataclass
 from datetime import date
@@ -44,15 +45,29 @@ _KW_REPORT = ("отчёт", "отчет", "сводк", "report")
 _KW_PERIOD_HINT = ("период", "за месяц")
 _KW_FORECAST = ("прогноз", "до конца месяц", "сколько заработ", "forecast")
 
+# Two ISO dates anywhere in text, separated by whitespace or a dash/«по».
+_ISO_PAIR_RE = re.compile(
+    r"(\d{4}-\d{2}-\d{2})\s*(?:[-–—]|по|до|–)?\s*(\d{4}-\d{2}-\d{2})",
+    re.IGNORECASE,
+)
+
+# "1-15 мая", "с 1 по 15 мая", "1 - 15 мая". Month-name resolved separately.
+_DAY_RANGE_RE = re.compile(
+    r"(?:с\s+)?(\d{1,2})\s*(?:[-–—]|по|до)\s*(\d{1,2})\b",
+    re.IGNORECASE,
+)
+
 
 @dataclass
 class NLIntent:
     """Result of parsing a free-text phrase."""
 
-    kind: str  # "report" | "period" | "cash" | "owed" | "forecast"
+    kind: str  # "report" | "period" | "cash" | "owed" | "forecast" | "range"
     year: int | None = None
     month: int | None = None  # 1..12
     months: int | None = None  # rolling window for "report"
+    start: date | None = None  # range intent
+    end: date | None = None  # range intent
 
 
 def _detect_month(text: str, today: date) -> tuple[int, int] | None:
@@ -87,6 +102,38 @@ def _detect_n_months(text: str) -> int | None:
     return n if 1 <= n <= 24 else None
 
 
+def _detect_range(text: str, today: date) -> tuple[date, date] | None:
+    """Detect a date range. Tries ISO pair first, then DD-DD <month>."""
+    iso = _ISO_PAIR_RE.search(text)
+    if iso:
+        try:
+            start = date.fromisoformat(iso.group(1))
+            end = date.fromisoformat(iso.group(2))
+        except ValueError:
+            return None
+        if end < start:
+            start, end = end, start
+        return start, end
+    day_match = _DAY_RANGE_RE.search(text)
+    if day_match is None:
+        return None
+    ym = _detect_month(text, today)
+    if ym is None:
+        return None
+    year, month = ym
+    try:
+        d1 = int(day_match.group(1))
+        d2 = int(day_match.group(2))
+    except ValueError:
+        return None
+    last_day = calendar.monthrange(year, month)[1]
+    if not (1 <= d1 <= last_day) or not (1 <= d2 <= last_day):
+        return None
+    start = date(year, month, min(d1, d2))
+    end = date(year, month, max(d1, d2))
+    return start, end
+
+
 def parse_intent(text: str, *, today: date) -> NLIntent | None:
     """Best-effort parse of ``text`` into an accounting intent.
 
@@ -98,6 +145,10 @@ def parse_intent(text: str, *, today: date) -> NLIntent | None:
     s = text.strip().lower()
     if not s or s.startswith("/"):
         return None
+
+    rng = _detect_range(s, today)
+    if rng is not None:
+        return NLIntent(kind="range", start=rng[0], end=rng[1])
 
     ym = _detect_month(s, today)
     n_months = _detect_n_months(s)
