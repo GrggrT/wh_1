@@ -49,6 +49,7 @@ from src.services.reports.restore import (
 from src.services.share_backup import (
     ShareTokenError,
     issue_share_token,
+    peek_share_token,
     redeem_share_token,
 )
 
@@ -59,6 +60,14 @@ router = Router()
 
 class RestoreFlow(StatesGroup):
     awaiting_document = State()
+    awaiting_confirm = State()
+
+
+class ShareRestoreFlow(StatesGroup):
+    awaiting_confirm = State()
+
+
+class CloudRestoreFlow(StatesGroup):
     awaiting_confirm = State()
 
 
@@ -366,13 +375,49 @@ async def cmd_backup_to_cloud(
     )
 
 
+def _share_confirm_kb() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        inline_keyboard=[[
+            InlineKeyboardButton(
+                text=t("restore_btn_confirm"), callback_data="share:apply",
+            ),
+            InlineKeyboardButton(
+                text=t("restore_btn_cancel"), callback_data="share:cancel",
+            ),
+        ]],
+    )
+
+
+def _cloud_confirm_kb() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        inline_keyboard=[[
+            InlineKeyboardButton(
+                text=t("restore_btn_confirm"), callback_data="cloud:apply",
+            ),
+            InlineKeyboardButton(
+                text=t("restore_btn_cancel"), callback_data="cloud:cancel",
+            ),
+        ]],
+    )
+
+
+@router.message(ShareRestoreFlow.awaiting_confirm, Command("cancel"))
+@router.message(CloudRestoreFlow.awaiting_confirm, Command("cancel"))
+async def cmd_share_or_cloud_cancel(
+    message: Message, state: FSMContext,
+) -> None:
+    await state.clear()
+    await message.answer(t("cancelled"))
+
+
 @router.message(Command("restore_from_cloud"))
 async def cmd_restore_from_cloud(
     message: Message,
     command: CommandObject,
+    state: FSMContext,
     db_user: User | None = None,
 ) -> None:
-    """Fetch a cloud-stashed backup by key and apply it to the caller."""
+    """Fetch a cloud-stashed backup, preview row counts, await confirmation."""
     if db_user is None:
         return
     key = (command.args or "").strip()
@@ -393,13 +438,85 @@ async def cmd_restore_from_cloud(
                 t("restore_from_cloud_failed", reason=str(exc)),
             )
             return
+    try:
+        plan = parse_backup_xlsx(BytesIO(raw))
+    except BackupParseError as exc:
+        await message.answer(t("restore_failed", error=str(exc)))
+        return
+
+    await state.update_data(cloud_key=key)
+    await state.set_state(CloudRestoreFlow.awaiting_confirm)
+    await message.answer(
+        t(
+            "restore_from_cloud_preview",
+            days=len(plan.days),
+            advances=len(plan.advances),
+            payments=len(plan.payments),
+        ),
+        reply_markup=_cloud_confirm_kb(),
+    )
+
+
+@router.callback_query(
+    CloudRestoreFlow.awaiting_confirm, F.data == "cloud:cancel",
+)
+async def cb_cloud_cancel(
+    callback: CallbackQuery, state: FSMContext,
+) -> None:
+    await state.clear()
+    if isinstance(callback.message, Message):
+        with contextlib.suppress(Exception):
+            await callback.message.edit_reply_markup(reply_markup=None)
+        await callback.message.answer(t("restore_cancelled"))
+    await callback.answer()
+
+
+@router.callback_query(
+    CloudRestoreFlow.awaiting_confirm, F.data == "cloud:apply",
+)
+async def cb_cloud_apply(
+    callback: CallbackQuery,
+    state: FSMContext,
+    db_user: User | None = None,
+) -> None:
+    if db_user is None:
+        await callback.answer()
+        return
+    data = await state.get_data()
+    key = data.get("cloud_key")
+    if not key or not isinstance(callback.message, Message):
+        await state.clear()
+        await callback.answer()
+        return
+    settings = get_settings()
+    if not cloud_storage_enabled(settings):
+        await state.clear()
+        await callback.message.answer(t("cloud_backup_disabled"))
+        await callback.answer()
+        return
+
+    async for session in get_session():
+        try:
+            raw = await fetch_cloud_backup(
+                session, key=key, settings=settings,
+            )
+        except CloudBackupError as exc:
+            await callback.message.answer(
+                t("restore_from_cloud_failed", reason=str(exc)),
+            )
+            await state.clear()
+            await callback.answer()
+            return
         try:
             plan = parse_backup_xlsx(BytesIO(raw))
         except BackupParseError as exc:
-            await message.answer(t("restore_failed", error=str(exc)))
+            await callback.message.answer(t("restore_failed", error=str(exc)))
+            await state.clear()
+            await callback.answer()
             return
         result = await apply_restore(session, user=db_user, plan=plan)
         await session.commit()
+
     logger.info(
         "cloud_backup_restored",
         user_id=db_user.id, tg_id=db_user.tg_id,
@@ -410,7 +527,10 @@ async def cmd_restore_from_cloud(
         payments_inserted=result.payments_inserted,
         payments_skipped=result.payments_skipped,
     )
-    await message.answer(
+    await state.clear()
+    with contextlib.suppress(Exception):
+        await callback.message.edit_reply_markup(reply_markup=None)
+    await callback.message.answer(
         t(
             "restore_done",
             days_in=result.days_inserted, days_skip=result.days_skipped,
@@ -418,15 +538,17 @@ async def cmd_restore_from_cloud(
             pay_in=result.payments_inserted, pay_skip=result.payments_skipped,
         ),
     )
+    await callback.answer()
 
 
 @router.message(Command("restore_from"))
 async def cmd_restore_from(
     message: Message,
     command: CommandObject,
+    state: FSMContext,
     db_user: User | None = None,
 ) -> None:
-    """Redeem a share token issued by another account."""
+    """Peek a share token, preview row counts, await confirmation."""
     if db_user is None:
         return
     token = (command.args or "").strip()
@@ -435,14 +557,74 @@ async def cmd_restore_from(
         return
     async for session in get_session():
         try:
+            plan = await peek_share_token(
+                session, token=token, redeemer=db_user,
+            )
+        except ShareTokenError as exc:
+            await message.answer(t("restore_from_failed", reason=str(exc)))
+            return
+        # Peek is read-only; no commit required.
+
+    await state.update_data(share_token=token)
+    await state.set_state(ShareRestoreFlow.awaiting_confirm)
+    await message.answer(
+        t(
+            "restore_from_preview",
+            days=len(plan.days),
+            advances=len(plan.advances),
+            payments=len(plan.payments),
+        ),
+        reply_markup=_share_confirm_kb(),
+    )
+
+
+@router.callback_query(
+    ShareRestoreFlow.awaiting_confirm, F.data == "share:cancel",
+)
+async def cb_share_cancel(
+    callback: CallbackQuery, state: FSMContext,
+) -> None:
+    await state.clear()
+    if isinstance(callback.message, Message):
+        with contextlib.suppress(Exception):
+            await callback.message.edit_reply_markup(reply_markup=None)
+        await callback.message.answer(t("restore_cancelled"))
+    await callback.answer()
+
+
+@router.callback_query(
+    ShareRestoreFlow.awaiting_confirm, F.data == "share:apply",
+)
+async def cb_share_apply(
+    callback: CallbackQuery,
+    state: FSMContext,
+    db_user: User | None = None,
+) -> None:
+    if db_user is None:
+        await callback.answer()
+        return
+    data = await state.get_data()
+    token = data.get("share_token")
+    if not token or not isinstance(callback.message, Message):
+        await state.clear()
+        await callback.answer()
+        return
+
+    async for session in get_session():
+        try:
             result = await redeem_share_token(
                 session, token=token, redeemer=db_user,
             )
         except ShareTokenError as exc:
             await session.rollback()
-            await message.answer(t("restore_from_failed", reason=str(exc)))
+            await callback.message.answer(
+                t("restore_from_failed", reason=str(exc)),
+            )
+            await state.clear()
+            await callback.answer()
             return
         await session.commit()
+
     logger.info(
         "share_backup_redeemed",
         redeemer_user_id=db_user.id,
@@ -454,7 +636,10 @@ async def cmd_restore_from(
         payments_inserted=result.payments_inserted,
         payments_skipped=result.payments_skipped,
     )
-    await message.answer(
+    await state.clear()
+    with contextlib.suppress(Exception):
+        await callback.message.edit_reply_markup(reply_markup=None)
+    await callback.message.answer(
         t(
             "restore_done",
             days_in=result.days_inserted, days_skip=result.days_skipped,
@@ -462,3 +647,4 @@ async def cmd_restore_from(
             pay_in=result.payments_inserted, pay_skip=result.payments_skipped,
         ),
     )
+    await callback.answer()

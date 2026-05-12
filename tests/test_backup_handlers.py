@@ -27,10 +27,21 @@ from sqlalchemy.ext.asyncio import (
 from sqlalchemy.ext.compiler import compiles
 from src.bot.handlers import backup as backup_mod
 from src.bot.handlers import report as report_mod
-from src.core.models import Advance, Crew, DayEntry, SalaryPayment, User
+from src.core.config import Settings
+from src.core.models import (
+    Advance,
+    CloudBackup,
+    Crew,
+    DayEntry,
+    SalaryPayment,
+    ShareToken,
+    User,
+)
 from src.services import accounting as accounting_module
+from src.services import backup_cloud as backup_cloud_mod
 from src.services.advances import SalaryBreakdown
 from src.services.reports.backup import build_backup_xlsx
+from src.services.share_backup import issue_share_token
 
 
 @compiles(BigInteger, "sqlite")
@@ -44,6 +55,8 @@ _TABLES = [
     DayEntry.__table__,
     Advance.__table__,
     SalaryPayment.__table__,
+    ShareToken.__table__,
+    CloudBackup.__table__,
 ]
 
 
@@ -307,6 +320,210 @@ async def test_restore_cancel_callback_clears_without_writes(
     cb_msg = _FakeMessage()
     cb = _FakeCallback(data="restore:cancel", message=cb_msg)
     await backup_mod.cb_restore_cancel(
+        cb, fsm,  # type: ignore[arg-type]
+    )
+
+    rows = (await session.execute(
+        select(DayEntry).where(DayEntry.user_id == user.id),
+    )).scalars().all()
+    assert rows == []
+    assert fsm.state is None
+
+
+# ---------------------------------------------------------------------
+# /restore_from — share-token confirm flow
+# ---------------------------------------------------------------------
+
+
+class _Cmd:
+    def __init__(self, args: str) -> None:
+        self.args = args
+
+
+async def test_restore_from_preview_then_confirm_applies(
+    session: AsyncSession, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    src = User(
+        tg_id=200, name="Src",
+        hourly_rate=Decimal("50.00"), currency="PLN",
+    )
+    dst = User(
+        tg_id=201, name="Dst",
+        hourly_rate=Decimal("50.00"), currency="PLN",
+    )
+    session.add_all([src, dst])
+    await session.flush()
+    session.add(DayEntry(
+        user_id=src.id, day=date(2026, 5, 1),
+        hours=Decimal("8.00"), note=None,
+    ))
+    issued = await issue_share_token(session, source_user=src)
+    await session.commit()
+
+    _patch_get_session(monkeypatch, session, backup_mod)
+    _patch_message_class(monkeypatch, backup_mod)
+
+    fsm = _FakeFSM()
+    msg = _FakeMessage()
+    await backup_mod.cmd_restore_from(
+        msg, _Cmd(issued.token), fsm, db_user=dst,  # type: ignore[arg-type]
+    )
+
+    assert fsm.state == backup_mod.ShareRestoreFlow.awaiting_confirm
+    assert fsm._data.get("share_token") == issued.token
+    assert any("Дней: 1" in a["text"] for a in msg.answers)
+
+    cb_msg = _FakeMessage()
+    cb = _FakeCallback(data="share:apply", message=cb_msg)
+    await backup_mod.cb_share_apply(
+        cb, fsm, db_user=dst,  # type: ignore[arg-type]
+    )
+    assert cb.answered
+    rows = (await session.execute(
+        select(DayEntry).where(DayEntry.user_id == dst.id),
+    )).scalars().all()
+    assert len(rows) == 1
+    assert fsm.state is None
+
+
+async def test_restore_from_cancel_does_not_consume_token(
+    session: AsyncSession, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    src = User(
+        tg_id=210, name="Src",
+        hourly_rate=Decimal("50.00"), currency="PLN",
+    )
+    dst = User(
+        tg_id=211, name="Dst",
+        hourly_rate=Decimal("50.00"), currency="PLN",
+    )
+    session.add_all([src, dst])
+    await session.flush()
+    issued = await issue_share_token(session, source_user=src)
+    await session.commit()
+
+    _patch_get_session(monkeypatch, session, backup_mod)
+    _patch_message_class(monkeypatch, backup_mod)
+
+    fsm = _FakeFSM()
+    msg = _FakeMessage()
+    await backup_mod.cmd_restore_from(
+        msg, _Cmd(issued.token), fsm, db_user=dst,  # type: ignore[arg-type]
+    )
+    assert fsm.state == backup_mod.ShareRestoreFlow.awaiting_confirm
+
+    cb_msg = _FakeMessage()
+    cb = _FakeCallback(data="share:cancel", message=cb_msg)
+    await backup_mod.cb_share_cancel(
+        cb, fsm,  # type: ignore[arg-type]
+    )
+
+    # Token should still be redeemable — peek-then-cancel must not consume.
+    token_row = (await session.execute(
+        select(ShareToken).where(ShareToken.token == issued.token),
+    )).scalar_one()
+    assert token_row.redeemed_at is None
+    assert fsm.state is None
+
+
+# ---------------------------------------------------------------------
+# /restore_from_cloud — confirm flow
+# ---------------------------------------------------------------------
+
+
+def _cloud_settings() -> Settings:
+    return Settings(  # type: ignore[call-arg]
+        bot_token="t",
+        owner_tg_id=1,
+        supabase_url="https://example.supabase.co",
+        supabase_service_role_key="srv-key",
+        supabase_backups_bucket="backups",
+    )
+
+
+async def test_restore_from_cloud_preview_then_confirm_applies(
+    session: AsyncSession, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    user = await _seed_user(session)
+    days = [DayEntry(
+        id=1, user_id=user.id, day=date(2026, 5, 1),
+        hours=Decimal("8.00"), note=None,
+    )]
+    payload = build_backup_xlsx(
+        user, days, [], [], today=date(2026, 5, 12),
+    ).getvalue()
+
+    _patch_get_session(monkeypatch, session, backup_mod)
+    _patch_message_class(monkeypatch, backup_mod)
+    monkeypatch.setattr(backup_mod, "get_settings", _cloud_settings)
+    monkeypatch.setattr(backup_mod, "cloud_storage_enabled", lambda _s: True)
+
+    async def fake_fetch(
+        _s: AsyncSession, *, key: str, settings: Settings,  # noqa: ARG001
+    ) -> bytes:
+        assert key == "k1"
+        return payload
+
+    monkeypatch.setattr(backup_mod, "fetch_cloud_backup", fake_fetch)
+    monkeypatch.setattr(backup_cloud_mod, "fetch_cloud_backup", fake_fetch)
+
+    fsm = _FakeFSM()
+    msg = _FakeMessage()
+    await backup_mod.cmd_restore_from_cloud(
+        msg, _Cmd("k1"), fsm, db_user=user,  # type: ignore[arg-type]
+    )
+
+    assert fsm.state == backup_mod.CloudRestoreFlow.awaiting_confirm
+    assert fsm._data.get("cloud_key") == "k1"
+    assert any("Дней: 1" in a["text"] for a in msg.answers)
+
+    cb_msg = _FakeMessage()
+    cb = _FakeCallback(data="cloud:apply", message=cb_msg)
+    await backup_mod.cb_cloud_apply(
+        cb, fsm, db_user=user,  # type: ignore[arg-type]
+    )
+    assert cb.answered
+    rows = (await session.execute(
+        select(DayEntry).where(DayEntry.user_id == user.id),
+    )).scalars().all()
+    assert len(rows) == 1
+    assert fsm.state is None
+
+
+async def test_restore_from_cloud_cancel_does_not_apply(
+    session: AsyncSession, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    user = await _seed_user(session)
+    days = [DayEntry(
+        id=1, user_id=user.id, day=date(2026, 5, 1),
+        hours=Decimal("8.00"), note=None,
+    )]
+    payload = build_backup_xlsx(
+        user, days, [], [], today=date(2026, 5, 12),
+    ).getvalue()
+
+    _patch_get_session(monkeypatch, session, backup_mod)
+    _patch_message_class(monkeypatch, backup_mod)
+    monkeypatch.setattr(backup_mod, "get_settings", _cloud_settings)
+    monkeypatch.setattr(backup_mod, "cloud_storage_enabled", lambda _s: True)
+
+    async def fake_fetch(
+        _s: AsyncSession, *, key: str, settings: Settings,  # noqa: ARG001
+    ) -> bytes:
+        return payload
+
+    monkeypatch.setattr(backup_mod, "fetch_cloud_backup", fake_fetch)
+
+    fsm = _FakeFSM()
+    msg = _FakeMessage()
+    await backup_mod.cmd_restore_from_cloud(
+        msg, _Cmd("k1"), fsm, db_user=user,  # type: ignore[arg-type]
+    )
+    assert fsm.state == backup_mod.CloudRestoreFlow.awaiting_confirm
+
+    cb_msg = _FakeMessage()
+    cb = _FakeCallback(data="cloud:cancel", message=cb_msg)
+    await backup_mod.cb_cloud_cancel(
         cb, fsm,  # type: ignore[arg-type]
     )
 

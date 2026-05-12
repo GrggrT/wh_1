@@ -26,6 +26,7 @@ from src.core.models import (
 from src.services.share_backup import (
     ShareTokenError,
     issue_share_token,
+    peek_share_token,
     redeem_share_token,
 )
 
@@ -125,3 +126,32 @@ async def test_redeem_by_same_user_rejected(session: AsyncSession) -> None:
     issued = await issue_share_token(session, source_user=src)
     with pytest.raises(ShareTokenError, match="same_user"):
         await redeem_share_token(session, token=issued.token, redeemer=src)
+
+
+async def test_peek_returns_plan_without_consuming(
+    session: AsyncSession,
+) -> None:
+    src = await _add_user(session, tg_id=1, name="Src")
+    dst = await _add_user(session, tg_id=2, name="Dst")
+    session.add(DayEntry(
+        user_id=src.id, day=datetime(2026, 5, 1).date(),
+        hours=Decimal("8.00"), note=None,
+    ))
+    await session.flush()
+
+    issued = await issue_share_token(session, source_user=src)
+    plan = await peek_share_token(
+        session, token=issued.token, redeemer=dst,
+    )
+    assert len(plan.days) == 1
+    # Token still redeemable — peek didn't consume.
+    result = await redeem_share_token(
+        session, token=issued.token, redeemer=dst,
+    )
+    assert result.days_inserted == 1
+
+
+async def test_peek_invalid_token_raises(session: AsyncSession) -> None:
+    dst = await _add_user(session, tg_id=2, name="Dst")
+    with pytest.raises(ShareTokenError, match="not_found"):
+        await peek_share_token(session, token="garbage", redeemer=dst)

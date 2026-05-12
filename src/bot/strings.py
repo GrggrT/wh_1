@@ -622,6 +622,21 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
         "restore_from_failed": (
             "Не получилось применить код: {reason}."
         ),
+        "restore_from_preview": (
+            "📋 Код принят. Будет добавлено (существующее не трогаем):\n"
+            "• Дней: {days}\n"
+            "• Авансов: {advances}\n"
+            "• Выплат: {payments}\n\n"
+            "Применить?"
+        ),
+        "restore_from_cloud_preview": (
+            "📋 Бэкап скачан из облака. Будет добавлено (существующее не "
+            "трогаем):\n"
+            "• Дней: {days}\n"
+            "• Авансов: {advances}\n"
+            "• Выплат: {payments}\n\n"
+            "Применить?"
+        ),
         "cloud_backup_disabled": (
             "Облачное хранилище не настроено — обратись к владельцу."
         ),
@@ -806,6 +821,10 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
             "/export_archive [N] — все три формата отчёта в ZIP\n"
             "/backup — скачать резервную копию (XLSX, все данные)\n"
             "/restore — загрузить .xlsx-бэкап (только добавит)\n"
+            "/share_backup — выдать одноразовый код переноса\n"
+            "/restore_from <код> — принять данные по коду\n"
+            "/backup_to_cloud — сохранить бэкап в облако\n"
+            "/restore_from_cloud <ключ> — восстановить из облака\n"
             "/my_days — мои последние 14 дней\n"
             "/profile — имя, ставка, валюта, напоминание\n"
             "/my_rate — моя ставка\n"

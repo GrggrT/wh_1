@@ -119,14 +119,9 @@ async def _build_plan_for_user(
     )
 
 
-async def redeem_share_token(
-    session: AsyncSession,
-    *,
-    token: str,
-    redeemer: User,
-    now: datetime | None = None,
-) -> RestoreResult:
-    moment = now or datetime.now(tz=UTC)
+async def _validate_token(
+    session: AsyncSession, *, token: str, redeemer: User, moment: datetime,
+) -> tuple[ShareToken, User]:
     row = (
         await session.execute(
             select(ShareToken).where(ShareToken.token == token),
@@ -151,7 +146,39 @@ async def redeem_share_token(
     ).scalar_one_or_none()
     if source_user is None:
         raise ShareTokenError("source_missing")
+    return row, source_user
 
+
+async def peek_share_token(
+    session: AsyncSession,
+    *,
+    token: str,
+    redeemer: User,
+    now: datetime | None = None,
+) -> RestorePlan:
+    """Validate ``token`` and build the source user's plan WITHOUT consuming.
+
+    Used by the /restore_from confirm-step preview: counts are shown,
+    user confirms, then :func:`redeem_share_token` re-validates and applies.
+    """
+    moment = now or datetime.now(tz=UTC)
+    _row, source_user = await _validate_token(
+        session, token=token, redeemer=redeemer, moment=moment,
+    )
+    return await _build_plan_for_user(session, source_user=source_user)
+
+
+async def redeem_share_token(
+    session: AsyncSession,
+    *,
+    token: str,
+    redeemer: User,
+    now: datetime | None = None,
+) -> RestoreResult:
+    moment = now or datetime.now(tz=UTC)
+    row, source_user = await _validate_token(
+        session, token=token, redeemer=redeemer, moment=moment,
+    )
     plan = await _build_plan_for_user(session, source_user=source_user)
     result = await apply_restore(session, user=redeemer, plan=plan)
     row.redeemed_at = moment
