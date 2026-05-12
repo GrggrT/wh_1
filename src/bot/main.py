@@ -15,6 +15,7 @@ from src.bot.handlers import (
     accounting,
     admin,
     advances,
+    backup,
     breaks,
     common,
     crew_admin,
@@ -127,6 +128,7 @@ _CORE_COMMANDS: list[BotCommand] = [
     BotCommand(command="cash", description="Денежный поток за месяц"),
     BotCommand(command="owed", description="Что ещё не выплачено"),
     BotCommand(command="report", description="Отчёт за N месяцев: /report [N]"),
+    BotCommand(command="backup", description="Скачать резервную копию данных"),
     BotCommand(command="my_days", description="Мои последние 14 дней"),
     BotCommand(command="profile", description="Профиль: имя, ставка, валюта, напоминание"),
     BotCommand(command="my_rate", description="Моя ставка"),
@@ -317,6 +319,7 @@ async def main() -> None:
     dp.include_router(accounting.router)
     dp.include_router(profile.router)
     dp.include_router(report.router)
+    dp.include_router(backup.router)
     dp.include_router(calendar_handler.router)
     dp.include_router(settings_handler.router)
     # NL dispatcher must stay last: it catches any leftover plain text

@@ -566,6 +566,11 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
         "report_menu_12m": "12 мес",
         "report_menu_24m": "24 мес",
         "period_btn_png": "📈 График",
+        # Phase 7.1 — full XLSX backup
+        "backup_caption": (
+            "📦 Резервная копия\n"
+            "Дней: {days}  ·  Авансов: {advances}  ·  Выплат: {payments}"
+        ),
         # Phase 6.7 — period / cashflow / owed accounting
         "period_pick_prompt": "📊 За какой месяц показать?",
         "period_older_btn": "◀ Раньше",
@@ -654,6 +659,7 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
             "/cash [YYYY-MM] — денежный поток за месяц\n"
             "/owed — что ещё не выплачено\n"
             "/report [N] — отчёт за N месяцев (XLSX/PDF/PNG)\n"
+            "/backup — скачать резервную копию (XLSX, все данные)\n"
             "/my_days — мои последние 14 дней\n"
             "/profile — имя, ставка, валюта, напоминание\n"
             "/my_rate — моя ставка\n"
