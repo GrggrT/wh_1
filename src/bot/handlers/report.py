@@ -29,6 +29,7 @@ from src.core.config import get_settings
 from src.core.db import get_session
 from src.core.db_metrics import count_queries
 from src.core.models import User
+from src.services.reports.archive import archive_filename, build_report_archive
 from src.services.reports.pdf import build_report_pdf, pdf_filename
 from src.services.reports.png import build_report_png, png_filename
 from src.services.reports.service import get_report_data
@@ -207,6 +208,30 @@ async def cb_report_png(
         return
     await _send_report_file(
         callback, db_user, _PNG_CB_PREFIX, build_report_png, png_filename,
+    )
+
+
+@router.message(Command("export_archive"))
+async def cmd_export_archive(
+    message: Message, command: CommandObject, db_user: User | None = None,
+) -> None:
+    """Bundle XLSX + PDF + PNG for the requested window into a single ZIP."""
+    if db_user is None:
+        return
+    months = parse_months_arg(command.args)
+    if months is None:
+        await message.answer(t("report_bad_arg"))
+        return
+    tz = ZoneInfo(get_settings().timezone)
+    today = datetime.now(tz=tz).date()
+    async for session in get_session():
+        data = await get_report_data(
+            session, user=db_user, tz=tz, today=today, months=months,
+        )
+    buf = build_report_archive(data, db_user, months)
+    document = BufferedInputFile(buf.getvalue(), filename=archive_filename(months))
+    await message.answer_document(
+        document, caption=t("archive_caption", months=months),
     )
 
 

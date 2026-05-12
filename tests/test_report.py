@@ -21,6 +21,7 @@ from src.bot.handlers.report import parse_months_arg
 from src.core.models import Advance, Crew, DayEntry, SalaryPayment, User
 from src.services import accounting as accounting_module
 from src.services.advances import SalaryBreakdown, record_advance
+from src.services.reports.archive import archive_filename, build_report_archive
 from src.services.reports.pdf import build_report_pdf, pdf_filename
 from src.services.reports.png import build_report_png, png_filename
 from src.services.reports.service import get_report_data
@@ -416,6 +417,39 @@ async def test_build_report_png_returns_valid_png_bytes(
     blob = buf.getvalue()
     assert blob.startswith(_PNG_MAGIC)
     assert len(blob) > 2000
+
+
+# --- build_report_archive ----------------------------------------------
+
+
+def test_archive_filename_includes_window() -> None:
+    assert archive_filename(6) == "report_6m.zip"
+    assert archive_filename(24) == "report_24m.zip"
+
+
+async def test_build_report_archive_contains_all_three_formats(
+    session: AsyncSession, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import zipfile
+    from io import BytesIO
+
+    user = await _seed_user(session)
+    _stub_compute_salary(monkeypatch, by_month={
+        (2026, 5): (Decimal("160"), Decimal("8000")),
+        (2026, 4): (Decimal("160"), Decimal("8000")),
+    })
+    data = await get_report_data(
+        session, user=user, tz=_TZ, today=date(2026, 5, 20), months=2,
+    )
+    buf = build_report_archive(data, user, months=2)
+    with zipfile.ZipFile(BytesIO(buf.getvalue())) as zf:
+        names = set(zf.namelist())
+        assert names == {"report_2m.xlsx", "report_2m.pdf", "report_2m.png"}
+        assert zf.read("report_2m.pdf").startswith(b"%PDF-")
+        assert zf.read("report_2m.png").startswith(_PNG_MAGIC)
+        # XLSX is a ZIP itself; sniff via openpyxl rather than magic bytes.
+        wb = _load_workbook(zf.read("report_2m.xlsx"))
+        assert "Отчёт" in wb.sheetnames
 
 
 async def test_build_report_png_handles_unpriced_months(

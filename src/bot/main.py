@@ -129,6 +129,7 @@ _CORE_COMMANDS: list[BotCommand] = [
     BotCommand(command="owed", description="Что ещё не выплачено"),
     BotCommand(command="forecast", description="Прогноз до конца месяца"),
     BotCommand(command="report", description="Отчёт за N месяцев: /report [N]"),
+    BotCommand(command="export_archive", description="ZIP-архив отчёта (XLSX+PDF+PNG)"),
     BotCommand(command="backup", description="Скачать резервную копию данных"),
     BotCommand(command="my_days", description="Мои последние 14 дней"),
     BotCommand(command="profile", description="Профиль: имя, ставка, валюта, напоминание"),

@@ -574,6 +574,8 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
             "📦 Резервная копия\n"
             "Дней: {days}  ·  Авансов: {advances}  ·  Выплат: {payments}"
         ),
+        # Phase 7.8 — /export-archive
+        "archive_caption": "📦 Архив отчёта за {months} мес. (XLSX + PDF + PNG)",
         # Phase 7.2 — smart reminders
         "gap_nudge_with_last": (
             "👋 Давно не виделись. Последняя запись часов: {last_day}.\n"
@@ -711,6 +713,7 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
             "/owed — что ещё не выплачено\n"
             "/forecast — прогноз до конца текущего месяца\n"
             "/report [N] — отчёт за N месяцев (XLSX/PDF/PNG)\n"
+            "/export_archive [N] — все три формата отчёта в ZIP\n"
             "/backup — скачать резервную копию (XLSX, все данные)\n"
             "/my_days — мои последние 14 дней\n"
             "/profile — имя, ставка, валюта, напоминание\n"
