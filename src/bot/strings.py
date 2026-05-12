@@ -361,18 +361,21 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
         "active_none": "Сейчас никто не на смене.",
         "active_summary": "Открытые смены:\n{body}",
         # Phase 5.1 — daily hours entry
-        "h_prompt": "Сколько часов отработал сегодня?",
+        "h_prompt": "<b>🕒 Сколько часов отработал сегодня?</b>",
         "h_prompt_with_suggest": (
-            "Сколько часов отработал сегодня? Обычно у тебя {suggest} ч."
+            "<b>🕒 Сколько часов отработал сегодня?</b>\n"
+            "<i>Обычно у тебя {suggest} ч.</i>"
         ),
         "day_off_btn": "🌴 Выходной",
-        "h_recorded_new": "✅ Записал {hours} ч за {date}.",
-        "h_recorded_updated": "✏️ Обновил {date}: было {old} ч, стало {hours} ч.",
-        "day_off_recorded_new": "🌴 Записал выходной за {date}.",
-        "day_off_recorded_updated": (
-            "✏️ Обновил {date}: было {old} ч, стало — выходной."
+        "h_recorded_new": "✅ Записал <b>{hours} ч</b> за {date}.",
+        "h_recorded_updated": (
+            "✏️ Обновил {date}: было {old} ч, стало <b>{hours} ч</b>."
         ),
-        "my_days_row_dayoff": "{date}: выходной",
+        "day_off_recorded_new": "🌴 Записал <b>выходной</b> за {date}.",
+        "day_off_recorded_updated": (
+            "✏️ Обновил {date}: было {old} ч, стало — <b>выходной</b>."
+        ),
+        "my_days_row_dayoff": "{date}: 🌴 выходной",
         "h_bad_value": (
             "⚠ Не понял число часов.\n"
             "Пример: /h 8 или /h 8.5 (от 0.25 до 24)."
@@ -383,12 +386,12 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
         ),
         "h_bad_date": "⚠ Неверная дата. Формат: YYYY-MM-DD.",
         "my_days_empty": (
-            "За последние 14 дней нет записей. "
-            "Используй /h <часы>, чтобы поставить часы за сегодня."
+            "<i>За последние 14 дней нет записей.</i>\n"
+            "Используй /h &lt;часы&gt;, чтобы поставить часы за сегодня."
         ),
-        "my_days_header": "Последние 14 дней:",
-        "my_days_row": "{date}: {hours} ч",
-        "my_days_total": "Итого: {total} ч за {n} дн.",
+        "my_days_header": "<b>📋 Последние 14 дней</b>",
+        "my_days_row": "{date}: <b>{hours} ч</b>",
+        "my_days_total": "<b>Итого: {total} ч</b> за {n} дн.",
         # Phase 5.2 — advances + salary
         "advance_usage": (
             "Используй: /advance <tg_id> <сумма> [комментарий]. "
@@ -426,10 +429,12 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
         "user_not_found": "Пользователь не найден.",
         # Phase 5.3 — evening reminders
         "day_reminder_text": (
-            "Не забудь поставить часы за сегодня. Сколько отработал?"
+            "<b>⏰ Не забудь поставить часы за сегодня.</b>\n"
+            "Сколько отработал?"
         ),
         "day_reminder_with_suggest": (
-            "Не забудь поставить часы за сегодня. Обычно у тебя {suggest} ч."
+            "<b>⏰ Не забудь поставить часы за сегодня.</b>\n"
+            "<i>Обычно у тебя {suggest} ч.</i>"
         ),
         "remind_on_usage": (
             "Используй: /remind_on HH (час по локальному времени, 0–23). "
@@ -521,13 +526,13 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
         "cal_fill_result": "✅ Добавлено будних дней: {n} × 10 ч.",
         "cal_fill_none": "ℹ Будни уже отмечены.",
         "cal_day_header": "<b>📅 {date}</b>",
-        "cal_day_no_entry": "Часы: не указаны",
-        "cal_day_off_line": "🌴 Выходной",
-        "cal_day_hours": "Часы: {hours}",
-        "cal_day_advances": "💵 Авансов: {n} на сумму {total} {currency}",
-        "cal_day_advance_row": "  · {amount} {currency} за период {period}",
-        "cal_day_payments": "💰 Выплат: {n} на сумму {total} {currency}",
-        "cal_day_payment_row": "  · {amount} {currency} за период {period}",
+        "cal_day_no_entry": "Часы: <i>не указаны</i>",
+        "cal_day_off_line": "🌴 <b>Выходной</b>",
+        "cal_day_hours": "Часы: <b>{hours}</b>",
+        "cal_day_advances": "💵 Авансов: <b>{n}</b> на сумму <b>{total} {currency}</b>",
+        "cal_day_advance_row": "  · <b>{amount} {currency}</b> за период {period}",
+        "cal_day_payments": "💰 Выплат: <b>{n}</b> на сумму <b>{total} {currency}</b>",
+        "cal_day_payment_row": "  · <b>{amount} {currency}</b> за период {period}",
         "cal_btn_set_hours": "🕒 Поставить часы",
         "cal_btn_dayoff": "🌴 Отметить выходной",
         "cal_btn_advance": "💵 Записать аванс",

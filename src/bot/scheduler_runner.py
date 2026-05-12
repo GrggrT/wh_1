@@ -282,7 +282,10 @@ async def _maybe_send_day_reminders(bot: Bot, settings: Settings) -> None:
             )
             try:
                 await bot.send_message(
-                    user.tg_id, text, reply_markup=quick_keyboard(picks),
+                    user.tg_id,
+                    text,
+                    reply_markup=quick_keyboard(picks),
+                    parse_mode="HTML",
                 )
             except TelegramAPIError:
                 logger.warning("day_reminder_send_failed", user_id=user.id)

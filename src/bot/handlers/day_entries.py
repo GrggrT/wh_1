@@ -114,7 +114,7 @@ async def _record(
         else message_or_cq
     )
     if target is not None:
-        await target.answer(text)
+        await target.answer(text, parse_mode="HTML")
 
 
 @router.message(Command("h"))
@@ -147,7 +147,9 @@ async def cmd_h(
         if suggested is not None
         else t("h_prompt")
     )
-    await message.answer(prompt, reply_markup=quick_keyboard(picks))
+    await message.answer(
+        prompt, reply_markup=quick_keyboard(picks), parse_mode="HTML",
+    )
 
 
 @router.callback_query(F.data.startswith(_CB_PICK_TODAY))
@@ -246,7 +248,7 @@ async def cmd_my_days(message: Message, db_user: User | None = None) -> None:
     async for session in get_session():
         entries = await list_recent_entries(session, user_id=db_user.id, days=14)
     if not entries:
-        await message.answer(t("my_days_empty"))
+        await message.answer(t("my_days_empty"), parse_mode="HTML")
         return
     lines = [t("my_days_header")]
     total = Decimal(0)
@@ -265,4 +267,4 @@ async def cmd_my_days(message: Message, db_user: User | None = None) -> None:
         total += e.hours
         worked_days += 1
     lines.append(t("my_days_total", total=format_hours(total), n=worked_days))
-    await message.answer("\n".join(lines))
+    await message.answer("\n".join(lines), parse_mode="HTML")
