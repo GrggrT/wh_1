@@ -1,7 +1,7 @@
 """Background task that periodically auto-closes long shifts and sends reminders."""
 
 import asyncio
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 from decimal import Decimal
 from zoneinfo import ZoneInfo
 
@@ -41,6 +41,7 @@ from src.services.scheduler import (
     get_user_tg_id,
     mark_reminder_sent,
 )
+from src.services.share_cleanup import prune_expired
 from src.services.timezones import user_tz
 
 logger = structlog.get_logger()
@@ -54,6 +55,8 @@ _last_weekly_digest_iso_week: tuple[int, int] | None = None
 # resends one nudge.
 _last_gap_nudge_by_user: dict[int, date] = {}
 _last_debt_ping_iso_week_by_user: dict[int, tuple[int, int]] = {}
+# Hourly cleanup of expired share_tokens / cloud_backups rows + blobs.
+_last_share_cleanup_at: datetime | None = None
 
 _RU_MONTHS_SCH: tuple[str, ...] = (
     "Январь", "Февраль", "Март", "Апрель", "Май", "Июнь",
@@ -424,6 +427,32 @@ async def run_webhook_healer(bot: Bot, settings: Settings) -> None:
         await asyncio.sleep(30)
 
 
+async def _maybe_prune_share_data(_bot: Bot, settings: Settings) -> None:
+    """At most once per hour, drop expired share_tokens + cloud_backups."""
+    global _last_share_cleanup_at
+    now = datetime.now(tz=UTC)
+    if (
+        _last_share_cleanup_at is not None
+        and (now - _last_share_cleanup_at).total_seconds() < 3600
+    ):
+        return
+    async for session in get_session():
+        result = await prune_expired(session, settings=settings, now=now)
+        await session.commit()
+    _last_share_cleanup_at = now
+    if (
+        result.share_tokens_deleted
+        or result.cloud_backups_deleted
+        or result.storage_failures
+    ):
+        logger.info(
+            "share_cleanup_ran",
+            tokens=result.share_tokens_deleted,
+            cloud_rows=result.cloud_backups_deleted,
+            storage_failures=result.storage_failures,
+        )
+
+
 async def run_scheduler(bot: Bot, settings: Settings) -> None:
     """Run the maintenance loop until cancelled."""
     interval = settings.scheduler_interval_seconds
@@ -437,6 +466,7 @@ async def run_scheduler(bot: Bot, settings: Settings) -> None:
             await _maybe_send_day_reminders(bot, settings)
             await _maybe_send_gap_nudges(bot, settings)
             await _maybe_send_debt_pings(bot, settings)
+            await _maybe_prune_share_data(bot, settings)
         except Exception:  # noqa: BLE001
             logger.exception("scheduler_iteration_failed")
         await asyncio.sleep(interval)

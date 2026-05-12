@@ -90,6 +90,23 @@ async def download_xlsx(
     return resp.content
 
 
+async def delete_xlsx(
+    settings: Settings, *, storage_path: str,
+) -> None:
+    headers = {
+        "Authorization": f"Bearer {settings.supabase_service_role_key}",
+        "apikey": settings.supabase_service_role_key,
+    }
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        resp = await client.delete(
+            _object_url(settings, storage_path), headers=headers,
+        )
+    # 404 is fine — object already gone. Other 4xx/5xx raise so the caller
+    # can decide whether to keep the DB row (avoid orphaned blobs).
+    if resp.status_code not in (200, 204, 404):
+        resp.raise_for_status()
+
+
 def _build_storage_path(owner_id: int, key: str) -> str:
     return f"user_{owner_id}/{key}.xlsx"
 
