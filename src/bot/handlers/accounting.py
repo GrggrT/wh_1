@@ -43,6 +43,7 @@ from src.services.accounting import (
 )
 from src.services.advances import month_bounds, parse_year_month
 from src.services.day_entries import format_hours
+from src.services.forecast import Forecast, compute_forecast
 
 router = Router()
 
@@ -418,3 +419,61 @@ async def cmd_owed(message: Message, db_user: User | None = None) -> None:
             session, user=db_user, tz=tz, today=today,
         )
     await message.answer(format_owed(ledgers, db_user.currency))
+
+
+def format_forecast(fc: Forecast, currency: str) -> str:
+    """Render a Forecast as a human-readable Telegram message."""
+    lines = [
+        t(
+            "forecast_header",
+            month=_ru_month(fc.month),
+            year=fc.year,
+        ),
+        t(
+            "forecast_mtd",
+            hours=format_hours(fc.mtd_hours),
+            earnings=_fmt_money(fc.mtd_earnings),
+            currency=currency,
+        ),
+        t(
+            "forecast_business_days",
+            elapsed=fc.business_days_elapsed,
+            total=fc.business_days_total,
+            remaining=fc.business_days_remaining,
+        ),
+    ]
+    if fc.projected_total_hours is None:
+        lines.append(t("forecast_no_projection"))
+    else:
+        lines.append(
+            t(
+                "forecast_projection",
+                hours=format_hours(fc.projected_total_hours),
+                earnings=_fmt_money(fc.projected_total_earnings),
+                currency=currency,
+            ),
+        )
+        extra = fc.projected_additional_hours
+        if extra is not None and extra > 0:
+            lines.append(
+                t("forecast_remaining_hours", hours=format_hours(extra)),
+            )
+    return "\n".join(lines)
+
+
+@router.message(Command("forecast"))
+async def cmd_forecast(
+    message: Message, db_user: User | None = None,
+) -> None:
+    """``/forecast`` — project month-end hours + earnings from current pace."""
+    if db_user is None:
+        return
+    tz = ZoneInfo(get_settings().timezone)
+    today = datetime.now(tz=tz).date()
+    async for session in get_session():
+        fc = await compute_forecast(
+            session, user=db_user,
+            year=today.year, month=today.month,
+            today=today, tz=tz,
+        )
+    await message.answer(format_forecast(fc, db_user.currency))

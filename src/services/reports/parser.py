@@ -42,13 +42,14 @@ _KW_OWED = ("долг", "должн", "не выплачен", "остаток")
 _KW_CASH = ("касс", "движен", "поток")
 _KW_REPORT = ("отчёт", "отчет", "сводк", "report")
 _KW_PERIOD_HINT = ("период", "за месяц")
+_KW_FORECAST = ("прогноз", "до конца месяц", "сколько заработ", "forecast")
 
 
 @dataclass
 class NLIntent:
     """Result of parsing a free-text phrase."""
 
-    kind: str  # "report" | "period" | "cash" | "owed"
+    kind: str  # "report" | "period" | "cash" | "owed" | "forecast"
     year: int | None = None
     month: int | None = None  # 1..12
     months: int | None = None  # rolling window for "report"
@@ -100,6 +101,9 @@ def parse_intent(text: str, *, today: date) -> NLIntent | None:
 
     ym = _detect_month(s, today)
     n_months = _detect_n_months(s)
+
+    if any(kw in s for kw in _KW_FORECAST):
+        return NLIntent(kind="forecast")
 
     if any(kw in s for kw in _KW_OWED):
         return NLIntent(kind="owed")

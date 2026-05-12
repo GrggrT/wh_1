@@ -27,6 +27,21 @@ def test_parse_returns_none_for_unrelated_chatter() -> None:
     assert parse_intent("спасибо!", today=_TODAY) is None
 
 
+# --- forecast ---------------------------------------------------------
+
+
+def test_forecast_keyword() -> None:
+    intent = parse_intent("прогноз", today=_TODAY)
+    assert intent is not None
+    assert intent.kind == "forecast"
+
+
+def test_forecast_phrase_до_конца_месяца() -> None:
+    intent = parse_intent("сколько до конца месяца?", today=_TODAY)
+    assert intent is not None
+    assert intent.kind == "forecast"
+
+
 # --- owed -------------------------------------------------------------
 
 

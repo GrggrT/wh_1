@@ -14,7 +14,12 @@ from aiogram import F, Router
 from aiogram.filters.command import CommandObject
 from aiogram.types import Message
 
-from src.bot.handlers.accounting import cmd_cash, cmd_owed, cmd_period
+from src.bot.handlers.accounting import (
+    cmd_cash,
+    cmd_forecast,
+    cmd_owed,
+    cmd_period,
+)
 from src.bot.handlers.report import cmd_report
 from src.core.config import get_settings
 from src.core.models import User
@@ -47,6 +52,9 @@ async def nl_dispatch(
 
     if intent.kind == "owed":
         await cmd_owed(message, db_user=db_user)
+        return
+    if intent.kind == "forecast":
+        await cmd_forecast(message, db_user=db_user)
         return
     if intent.kind == "cash":
         await cmd_cash(

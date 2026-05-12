@@ -628,6 +628,23 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
             "осталось {remaining} {currency}"
         ),
         "owed_total": "Итого долг: {total} {currency}",
+        # Phase 7.4 — /forecast
+        "forecast_header": "🔮 Прогноз на {month} {year}",
+        "forecast_mtd": (
+            "Сейчас: {hours} ч, {earnings} {currency}."
+        ),
+        "forecast_business_days": (
+            "Будни: {elapsed} из {total} (осталось {remaining})."
+        ),
+        "forecast_no_projection": (
+            "Пока нет данных за этот месяц — прогноз появится после "
+            "первого рабочего дня."
+        ),
+        "forecast_projection": (
+            "Если темп сохранится: {hours} ч, ~{earnings} {currency} "
+            "к концу месяца."
+        ),
+        "forecast_remaining_hours": "Осталось добрать ~{hours} ч.",
         # Phase 6.9 — /profile editor
         "profile_header": (
             "⚙ Профиль\n"
@@ -679,6 +696,7 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
             "/period [YYYY-MM] — расчёт за период (часы + выплаты)\n"
             "/cash [YYYY-MM] — денежный поток за месяц\n"
             "/owed — что ещё не выплачено\n"
+            "/forecast — прогноз до конца текущего месяца\n"
             "/report [N] — отчёт за N месяцев (XLSX/PDF/PNG)\n"
             "/backup — скачать резервную копию (XLSX, все данные)\n"
             "/my_days — мои последние 14 дней\n"
