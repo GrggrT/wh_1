@@ -360,6 +360,7 @@ async def cmd_period(
     await message.answer(
         t("period_pick_prompt"),
         reply_markup=period_picker_keyboard(year, month),
+        parse_mode="HTML",
     )
 
 
@@ -592,7 +593,9 @@ async def cmd_range(
     parts = raw.split()
     if not parts:
         await message.answer(
-            t("range_picker_prompt"), reply_markup=_range_picker_kb(),
+            t("range_picker_prompt"),
+            reply_markup=_range_picker_kb(),
+            parse_mode="HTML",
         )
         return
     if len(parts) != 2:
@@ -609,7 +612,7 @@ async def cmd_range(
         rs = await compute_range_sum(
             session, user=db_user, start=start, end=end,
         )
-    await message.answer(format_range_sum(rs, db_user.currency))
+    await message.answer(format_range_sum(rs, db_user.currency), parse_mode="HTML")
 
 
 @router.callback_query(F.data.startswith("range:preset:"))
@@ -633,5 +636,7 @@ async def cb_range_preset(
         )
     with contextlib.suppress(Exception):
         await callback.message.edit_reply_markup(reply_markup=None)
-    await callback.message.answer(format_range_sum(rs, db_user.currency))
+    await callback.message.answer(
+        format_range_sum(rs, db_user.currency), parse_mode="HTML",
+    )
     await callback.answer()

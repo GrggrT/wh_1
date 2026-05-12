@@ -269,7 +269,7 @@ async def test_restore_confirm_round_trip_inserts_rows(
 
     assert fsm.state == backup_mod.RestoreFlow.awaiting_confirm
     assert fsm._data.get("file_id") == "abc123"
-    assert any("Дней: 1" in a["text"] for a in msg.answers)
+    assert any("Дней: <b>1</b>" in a["text"] for a in msg.answers)
 
     # Drive: confirm callback -> apply.
     cb_msg = _FakeMessage()
@@ -371,7 +371,7 @@ async def test_restore_from_preview_then_confirm_applies(
 
     assert fsm.state == backup_mod.ShareRestoreFlow.awaiting_confirm
     assert fsm._data.get("share_token") == issued.token
-    assert any("Дней: 1" in a["text"] for a in msg.answers)
+    assert any("Дней: <b>1</b>" in a["text"] for a in msg.answers)
 
     cb_msg = _FakeMessage()
     cb = _FakeCallback(data="share:apply", message=cb_msg)
@@ -475,7 +475,7 @@ async def test_restore_from_cloud_preview_then_confirm_applies(
 
     assert fsm.state == backup_mod.CloudRestoreFlow.awaiting_confirm
     assert fsm._data.get("cloud_key") == "k1"
-    assert any("Дней: 1" in a["text"] for a in msg.answers)
+    assert any("Дней: <b>1</b>" in a["text"] for a in msg.answers)
 
     cb_msg = _FakeMessage()
     cb = _FakeCallback(data="cloud:apply", message=cb_msg)

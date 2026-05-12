@@ -192,6 +192,7 @@ async def msg_restore_document(
             payments=len(plan.payments),
         ),
         reply_markup=_restore_confirm_kb(),
+        parse_mode="HTML",
     )
 
 
@@ -268,6 +269,7 @@ async def cb_restore_apply(
             adv_in=result.advances_inserted, adv_skip=result.advances_skipped,
             pay_in=result.payments_inserted, pay_skip=result.payments_skipped,
         ),
+        parse_mode="HTML",
     )
     await callback.answer()
 
@@ -464,6 +466,7 @@ async def cmd_restore_from_cloud(
             payments=len(plan.payments),
         ),
         reply_markup=_cloud_confirm_kb(),
+        parse_mode="HTML",
     )
 
 
@@ -547,6 +550,7 @@ async def cb_cloud_apply(
             adv_in=result.advances_inserted, adv_skip=result.advances_skipped,
             pay_in=result.payments_inserted, pay_skip=result.payments_skipped,
         ),
+        parse_mode="HTML",
     )
     await callback.answer()
 
@@ -585,6 +589,7 @@ async def cmd_restore_from(
             payments=len(plan.payments),
         ),
         reply_markup=_share_confirm_kb(),
+        parse_mode="HTML",
     )
 
 
@@ -656,5 +661,6 @@ async def cb_share_apply(
             adv_in=result.advances_inserted, adv_skip=result.advances_skipped,
             pay_in=result.payments_inserted, pay_skip=result.payments_skipped,
         ),
+        parse_mode="HTML",
     )
     await callback.answer()

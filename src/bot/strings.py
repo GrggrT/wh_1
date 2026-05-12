@@ -492,13 +492,15 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
         "onb_reminder_saved": "✅ Напомню в <b>{hour}:00</b>.",
         "onb_reminder_skipped": "✅ Без напоминаний — окей.",
         "onb_done": (
-            "Готово! Используй кнопки ниже:\n"
-            "🕒 Часы за сегодня — поставить часы\n"
-            "📆 Календарь — редактировать любую дату\n"
-            "📊 Период — расчёт за месяц\n"
-            "💸 Касса — авансы и выплаты\n"
-            "📈 Отчёты — сводка за N месяцев\n"
-            "⚙ Профиль — имя, ставка, валюта, напоминание, часовой пояс\n\n"
+            "<b>🎉 Готово! Используй кнопки ниже:</b>\n"
+            "\n"
+            "<b>🕒 Часы за сегодня</b> — поставить часы\n"
+            "<b>📆 Календарь</b> — редактировать любую дату\n"
+            "<b>📊 Период</b> — расчёт за месяц\n"
+            "<b>💸 Касса</b> — авансы и выплаты\n"
+            "<b>📈 Отчёты</b> — сводка за N месяцев\n"
+            "<b>⚙ Профиль</b> — имя, ставка, валюта, напоминание, часовой пояс\n"
+            "\n"
             "Все команды — /help."
         ),
         "onb_cancelled": (
@@ -609,20 +611,22 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
         ),
         "restore_failed": "⚠ Не получилось прочитать файл: {error}",
         "restore_preview": (
-            "📋 Файл прочитан. Будет добавлено (существующее не трогаем):\n"
-            "• Дней: {days}\n"
-            "• Авансов: {advances}\n"
-            "• Выплат: {payments}\n\n"
+            "<b>📋 Файл прочитан.</b>\n"
+            "<i>Существующее не трогаем — только добавим:</i>\n"
+            "• Дней: <b>{days}</b>\n"
+            "• Авансов: <b>{advances}</b>\n"
+            "• Выплат: <b>{payments}</b>\n"
+            "\n"
             "Применить?"
         ),
         "restore_btn_confirm": "✅ Применить",
         "restore_btn_cancel": "❌ Отменить",
-        "restore_cancelled": "Восстановление отменено.",
+        "restore_cancelled": "❎ Восстановление отменено.",
         "restore_done": (
-            "✅ Восстановление завершено.\n"
-            "Дни: добавлено {days_in}, пропущено {days_skip}.\n"
-            "Авансы: добавлено {adv_in}, пропущено {adv_skip}.\n"
-            "Выплаты: добавлено {pay_in}, пропущено {pay_skip}."
+            "<b>✅ Восстановление завершено.</b>\n"
+            "Дни: добавлено <b>{days_in}</b>, пропущено {days_skip}\n"
+            "Авансы: добавлено <b>{adv_in}</b>, пропущено {adv_skip}\n"
+            "Выплаты: добавлено <b>{pay_in}</b>, пропущено {pay_skip}"
         ),
         "share_backup_issued": (
             "🔑 Одноразовый код для переноса данных:\n"
@@ -643,18 +647,21 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
             "⚠ Не получилось применить код: {reason}."
         ),
         "restore_from_preview": (
-            "📋 Код принят. Будет добавлено (существующее не трогаем):\n"
-            "• Дней: {days}\n"
-            "• Авансов: {advances}\n"
-            "• Выплат: {payments}\n\n"
+            "<b>📋 Код принят.</b>\n"
+            "<i>Существующее не трогаем — только добавим:</i>\n"
+            "• Дней: <b>{days}</b>\n"
+            "• Авансов: <b>{advances}</b>\n"
+            "• Выплат: <b>{payments}</b>\n"
+            "\n"
             "Применить?"
         ),
         "restore_from_cloud_preview": (
-            "📋 Бэкап скачан из облака. Будет добавлено (существующее не "
-            "трогаем):\n"
-            "• Дней: {days}\n"
-            "• Авансов: {advances}\n"
-            "• Выплат: {payments}\n\n"
+            "<b>📋 Бэкап скачан из облака.</b>\n"
+            "<i>Существующее не трогаем — только добавим:</i>\n"
+            "• Дней: <b>{days}</b>\n"
+            "• Авансов: <b>{advances}</b>\n"
+            "• Выплат: <b>{payments}</b>\n"
+            "\n"
             "Применить?"
         ),
         "cloud_backup_disabled": (
@@ -696,7 +703,7 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
             "Итого: {total} {currency}. Подробнее: /owed"
         ),
         # Phase 6.7 — period / cashflow / owed accounting
-        "period_pick_prompt": "📊 За какой месяц показать?",
+        "period_pick_prompt": "<b>📊 За какой месяц показать?</b>",
         "period_older_btn": "◀ Раньше",
         "period_header": "<b>📊 Период {month} {year}</b>",
         "period_hours_rate": "Часы: <b>{hours}</b>  ·  Ставка: {rate}",
@@ -759,15 +766,16 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
         "range_bad_format": (
             "⚠ Не понял даты. Формат: /range YYYY-MM-DD YYYY-MM-DD."
         ),
-        "range_header": "🧮 Период {start} … {end}",
-        "range_hours": "Часы: {hours} ч за {days} дн.",
-        "range_earnings": "Заработано: {earnings} {currency}.",
+        "range_header": "<b>🧮 Период {start} … {end}</b>",
+        "range_hours": "Часы: <b>{hours} ч</b> за {days} дн.",
+        "range_earnings": "Заработано: <b>{earnings} {currency}</b>.",
         "range_no_rate": (
             "Ставка не задана — рассчитать заработок не могу. "
             "Установи в /profile."
         ),
         "range_picker_prompt": (
-            "🧮 Выбери период или пришли /range YYYY-MM-DD YYYY-MM-DD"
+            "<b>🧮 Выбери период</b>\n"
+            "или пришли: /range YYYY-MM-DD YYYY-MM-DD"
         ),
         "range_btn_this_week": "📅 Эта неделя",
         "range_btn_last_week": "📅 Прошлая неделя",

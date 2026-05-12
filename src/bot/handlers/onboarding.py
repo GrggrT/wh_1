@@ -308,7 +308,9 @@ async def _finish(
             t("onb_reminder_saved", hour=f"{hour:02d}"), parse_mode="HTML",
         )
     await target.answer(
-        t("onb_done"), reply_markup=simple_menu(snap, db_user.role),
+        t("onb_done"),
+        reply_markup=simple_menu(snap, db_user.role),
+        parse_mode="HTML",
     )
 
 
