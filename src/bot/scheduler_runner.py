@@ -41,6 +41,7 @@ from src.services.scheduler import (
     get_user_tg_id,
     mark_reminder_sent,
 )
+from src.services.timezones import user_tz
 
 logger = structlog.get_logger()
 
@@ -250,12 +251,21 @@ async def _maybe_send_weekly_digest(bot: Bot, settings: Settings) -> None:
 
 async def _maybe_send_day_reminders(bot: Bot, settings: Settings) -> None:
     """DM each user with the inline quick-pick at/after their configured
-    local reminder hour, once per day, only when no day-entry exists yet."""
+    local reminder hour, once per day, only when no day-entry exists yet.
+
+    Phase 7.9: eligibility is scored against each user's own ``timezone``
+    field (falls back to ``settings.timezone``), so users in different
+    zones get reminded at the right wall-clock time.
+    """
     tz = ZoneInfo(settings.timezone)
     now_local = datetime.now(tz=tz)
-    today = now_local.date()
     async for session in get_session():
-        users = await find_users_needing_reminder(session, tz=tz, now=now_local)
+        users = await find_users_needing_reminder(
+            session,
+            tz=tz,
+            now=now_local,
+            resolve_tz=lambda u: user_tz(u, settings),
+        )
         if not users:
             return
         for user in users:
@@ -274,7 +284,8 @@ async def _maybe_send_day_reminders(bot: Bot, settings: Settings) -> None:
             except TelegramAPIError:
                 logger.warning("day_reminder_send_failed", user_id=user.id)
                 continue
-            await mark_reminded(session, user=user, today=today)
+            user_today = now_local.astimezone(user_tz(user, settings)).date()
+            await mark_reminded(session, user=user, today=user_today)
         await session.commit()
 
 

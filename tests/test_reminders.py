@@ -171,3 +171,48 @@ def test_find_users_needing_reminder_signature_accepts_zoneinfo() -> None:
     # can pass a MagicMock session if they wire side_effects themselves.
     session = MagicMock()
     assert session is not None
+
+
+# --- Phase 7.9 — per-user resolve_tz path -------------------------------
+
+_DUBAI = ZoneInfo("Asia/Dubai")  # +4
+_NEW_YORK = ZoneInfo("America/New_York")  # -4/-5
+
+
+@pytest.mark.asyncio
+async def test_resolve_tz_includes_user_whose_local_hour_has_passed() -> None:
+    """At 16:00 UTC, Dubai is 20:00 (>=19 ✓) while New York is 12:00 (<19 ✗)."""
+    dubai_user = FakeUser(id=1, remind_hour_local=19, day_reminder_last_sent=None)
+    ny_user = FakeUser(id=2, remind_hour_local=19, day_reminder_last_sent=None)
+    session = _make_session(
+        _ExecuteResult(scalar_items=[dubai_user, ny_user]),
+        _ExecuteResult(rows=[]),  # no DayEntry for anyone
+    )
+    now_utc = datetime(2026, 5, 11, 16, 0, tzinfo=ZoneInfo("UTC"))
+    tz_map = {1: _DUBAI, 2: _NEW_YORK}
+
+    out = await find_users_needing_reminder(
+        session, tz=_WARSAW, now=now_utc,
+        resolve_tz=lambda u: tz_map[u.id],  # type: ignore[attr-defined]
+    )
+
+    assert [u.id for u in out] == [1]
+
+
+@pytest.mark.asyncio
+async def test_resolve_tz_uses_user_local_date_for_dedup() -> None:
+    """User already reminded 'today' in their local zone is skipped."""
+    # 22:00 UTC on 2026-05-11 -> Dubai local: 02:00 on 2026-05-12.
+    dubai_user = FakeUser(
+        id=1, remind_hour_local=2,
+        day_reminder_last_sent=date(2026, 5, 12),  # already reminded
+    )
+    session = _make_session(_ExecuteResult(scalar_items=[dubai_user]))
+    now_utc = datetime(2026, 5, 11, 22, 0, tzinfo=ZoneInfo("UTC"))
+
+    out = await find_users_needing_reminder(
+        session, tz=_WARSAW, now=now_utc,
+        resolve_tz=lambda _u: _DUBAI,
+    )
+
+    assert out == []
