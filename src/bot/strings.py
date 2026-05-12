@@ -374,14 +374,14 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
         ),
         "my_days_row_dayoff": "{date}: выходной",
         "h_bad_value": (
-            "Не понял число часов. Пример: /h 8 или /h 8.5. "
-            "Допустимо от 0.25 до 24."
+            "⚠ Не понял число часов.\n"
+            "Пример: /h 8 или /h 8.5 (от 0.25 до 24)."
         ),
         "h_edit_usage": (
-            "Используй: /edit_day YYYY-MM-DD <часы>. "
+            "💡 Используй: /edit_day YYYY-MM-DD <часы>\n"
             "Например: /edit_day 2026-05-10 8.5"
         ),
-        "h_bad_date": "Неверная дата. Используй формат YYYY-MM-DD.",
+        "h_bad_date": "⚠ Неверная дата. Формат: YYYY-MM-DD.",
         "my_days_empty": (
             "За последние 14 дней нет записей. "
             "Используй /h <часы>, чтобы поставить часы за сегодня."
@@ -395,7 +395,8 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
             "Например: /advance 123456789 500 Аванс на материалы"
         ),
         "advance_bad_amount": (
-            "Сумма должна быть положительным числом. Пример: 500 или 500.50"
+            "⚠ Сумма должна быть положительным числом.\n"
+            "Пример: 500 или 500.50"
         ),
         "advance_recorded": (
             "✅ Аванс зафиксирован.\n"
@@ -410,7 +411,7 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
         "advances_total": "Итого авансов: {total} {currency}",
         "crew_advances_header": "Авансы бригады за {year}-{month}:",
         "crew_advances_member": "{name}: {total} {currency} ({n} шт)",
-        "month_format": "Неверный формат месяца. Используй YYYY-MM, например 2026-05.",
+        "month_format": "⚠ Неверный формат месяца. Используй YYYY-MM, например 2026-05.",
         "salary_header": "Расчёт за {year}-{month}:",
         "salary_hours": "Часы: {h}",
         "salary_earnings": "Начислено: {earnings} {currency}",
@@ -434,7 +435,7 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
             "Используй: /remind_on HH (час по локальному времени, 0–23). "
             "Например: /remind_on 19"
         ),
-        "remind_bad_hour": "Час должен быть числом от 0 до 23.",
+        "remind_bad_hour": "⚠ Час должен быть числом от 0 до 23.",
         "remind_on_ok": (
             "Вечернее напоминание включено: в {hour}:00 по твоему часовому поясу."
         ),
@@ -458,14 +459,15 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
             "Можно оставить «{tg_name}» — жми кнопку ниже — или прислать другое."
         ),
         "onb_name_use_tg_btn": "Оставить «{tg_name}»",
-        "onb_name_bad": "Имя пустое. Пришли текстом или жми кнопку ниже.",
+        "onb_name_bad": "⚠ Имя пустое. Пришли текстом или жми кнопку ниже.",
         "onb_name_saved": "Имя: {name}",
         "onb_currency_prompt": (
             "В какой валюте считаем зарплату? "
             "Выбери ниже или пришли код из 3 букв (например: PLN, USD, EUR)."
         ),
         "onb_currency_bad": (
-            "Код валюты — 3 латинские буквы (например, PLN). Попробуй ещё или жми кнопку."
+            "⚠ Код валюты — 3 латинские буквы (например, PLN).\n"
+            "Попробуй ещё или жми кнопку."
         ),
         "onb_currency_saved": "Валюта: {currency}.",
         "onb_rate_prompt": (
@@ -475,7 +477,8 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
         ),
         "onb_rate_skip_btn": "Пропустить",
         "onb_rate_bad": (
-            "Не понял сумму. Пример: 35 или 42.5. Или жми «Пропустить»."
+            "⚠ Не понял сумму. Пример: 35 или 42.5.\n"
+            "Или жми «Пропустить»."
         ),
         "onb_rate_saved": "Ставка: {rate} {currency}/ч",
         "onb_rate_skipped": "Ставку пропустили.",
@@ -569,7 +572,7 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
             "получено {received} {currency} · долг <b>{owed} {currency}</b>"
         ),
         "report_total_overpaid": "Переплата (всего): <b>{overpaid} {currency}</b>",
-        "report_bad_arg": "Использование: /report [N] — где N от 1 до 24 месяцев.",
+        "report_bad_arg": "⚠ Использование: /report [N] — где N от 1 до 24 месяцев.",
         "report_btn_xlsx": "📥 XLSX",
         "report_btn_pdf": "📄 PDF",
         "report_btn_png": "📈 PNG",
@@ -598,12 +601,12 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
             "Жду файл .xlsx от /backup. /cancel — отмена."
         ),
         "restore_bad_format": (
-            "Это не .xlsx. Пришли резервную копию от команды /backup."
+            "⚠ Это не .xlsx. Пришли резервную копию от команды /backup."
         ),
         "restore_too_large": (
-            "Файл слишком большой (лимит 5 МБ). Это точно бэкап от /backup?"
+            "⚠ Файл слишком большой (лимит 5 МБ). Это точно бэкап от /backup?"
         ),
-        "restore_failed": "Не получилось прочитать файл: {error}",
+        "restore_failed": "⚠ Не получилось прочитать файл: {error}",
         "restore_preview": (
             "📋 Файл прочитан. Будет добавлено (существующее не трогаем):\n"
             "• Дней: {days}\n"
@@ -636,7 +639,7 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
             "Код выдаёт /share_backup на старом аккаунте."
         ),
         "restore_from_failed": (
-            "Не получилось применить код: {reason}."
+            "⚠ Не получилось применить код: {reason}."
         ),
         "restore_from_preview": (
             "📋 Код принят. Будет добавлено (существующее не трогаем):\n"
@@ -749,11 +752,11 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
         "forecast_remaining_hours": "Осталось добрать ~<b>{hours} ч</b>.",
         # Phase 7.x — /range
         "range_usage": (
-            "Используй: /range YYYY-MM-DD YYYY-MM-DD\n"
+            "💡 Используй: /range YYYY-MM-DD YYYY-MM-DD\n"
             "Пример: /range 2026-05-01 2026-05-15"
         ),
         "range_bad_format": (
-            "Не понял даты. Формат: /range YYYY-MM-DD YYYY-MM-DD."
+            "⚠ Не понял даты. Формат: /range YYYY-MM-DD YYYY-MM-DD."
         ),
         "range_header": "🧮 Период {start} … {end}",
         "range_hours": "Часы: {hours} ч за {days} дн.",
@@ -790,13 +793,13 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
         "profile_btn_timezone": "🌐 Часовой пояс",
         "profile_btn_close": "Закрыть",
         "profile_name_prompt": "Пришли новое имя. /cancel — отмена.",
-        "profile_name_bad": "Имя пустое. Пришли текстом или /cancel.",
+        "profile_name_bad": "⚠ Имя пустое. Пришли текстом или /cancel.",
         "profile_name_saved": "Имя обновлено: {name}.",
         "profile_rate_prompt": (
             "Пришли новую ставку за час в {currency}. Например: 35 или 42.5\n"
             "Чтобы убрать ставку — пришли «-». /cancel — отмена."
         ),
-        "profile_rate_bad": "Не понял сумму. Пример: 35 или 42.5, или «-».",
+        "profile_rate_bad": "⚠ Не понял сумму. Пример: 35 или 42.5, или «-».",
         "profile_rate_saved": "Ставка обновлена: {rate} {currency}/ч.",
         "profile_rate_cleared": "Ставка убрана.",
         "profile_currency_prompt": (
@@ -804,7 +807,7 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
             "/cancel — отмена."
         ),
         "profile_currency_bad": (
-            "Код валюты должен быть из 3 латинских букв (например, PLN). Попробуй ещё."
+            "⚠ Код валюты — 3 латинские буквы (например, PLN). Попробуй ещё."
         ),
         "profile_currency_saved": "Валюта обновлена: {currency}.",
         "profile_reminder_prompt": (
@@ -819,7 +822,7 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
         ),
         "profile_timezone_btn_default": "Использовать по умолчанию",
         "profile_timezone_bad": (
-            "Неизвестный часовой пояс. Пример: Europe/Warsaw."
+            "⚠ Неизвестный часовой пояс. Пример: Europe/Warsaw."
         ),
         "profile_timezone_saved": "Часовой пояс: {tz}.",
         "profile_timezone_cleared": "Часовой пояс сброшен на значение по умолчанию.",
@@ -829,56 +832,65 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
             "Эта функция выключена. Владелец может включить её в /settings."
         ),
         "help_core": (
-            "Команды:\n"
-            "/h <часы> — поставить часы за сегодня (например: /h 8)\n"
+            "<b>🕒 Запись часов</b>\n"
+            "/h &lt;часы&gt; — часы за сегодня (например: /h 8)\n"
             "/calendar — календарь: редактировать любую дату\n"
-            "/period [YYYY-MM] — расчёт за период (часы + выплаты)\n"
+            "/my_days — мои последние 14 дней\n"
+            "\n"
+            "<b>📊 Отчёты и аналитика</b>\n"
+            "/period [YYYY-MM] — расчёт за период\n"
             "/cash [YYYY-MM] — денежный поток за месяц\n"
             "/owed — что ещё не выплачено\n"
-            "/forecast — прогноз до конца текущего месяца\n"
+            "/forecast — прогноз до конца месяца\n"
             "/report [N] — отчёт за N месяцев (XLSX/PDF/PNG)\n"
-            "/export_archive [N] — все три формата отчёта в ZIP\n"
-            "/backup — скачать резервную копию (XLSX, все данные)\n"
-            "/restore — загрузить .xlsx-бэкап (только добавит)\n"
-            "/share_backup — выдать одноразовый код переноса\n"
-            "/restore_from <код> — принять данные по коду\n"
-            "/backup_to_cloud — сохранить бэкап в облако\n"
-            "/restore_from_cloud <ключ> — восстановить из облака\n"
-            "/my_days — мои последние 14 дней\n"
-            "/profile — имя, ставка, валюта, напоминание\n"
-            "/my_rate — моя ставка\n"
-            "/remind_on HH — вечернее напоминание\n"
-            "/remind_off — отключить напоминание\n"
-            "/whoami — кто я\n"
+            "/range — сумма за произвольный период\n"
+            "/export_archive [N] — все три формата в ZIP\n"
+            "\n"
+            "<b>💾 Бэкап и перенос</b>\n"
+            "/backup — резервная копия (XLSX, все данные)\n"
+            "/restore — загрузить .xlsx-бэкап\n"
+            "/share_backup — одноразовый код переноса\n"
+            "/restore_from &lt;код&gt; — принять данные по коду\n"
+            "/backup_to_cloud — сохранить в облако\n"
+            "/restore_from_cloud &lt;ключ&gt; — восстановить из облака\n"
+            "\n"
+            "<b>⚙ Профиль и настройки</b>\n"
+            "/profile — имя, ставка, валюта, напоминание, часовой пояс\n"
+            "/remind_on HH — включить вечернее напоминание\n"
+            "/remind_off — выключить напоминание\n"
             "/settings — настройки режима\n"
             "/cancel — отмена текущего действия\n"
-            "\nМожно писать словами: «отчёт за 6 мес», «период май», "
-            "«касса за апрель», «долг»."
+            "\n"
+            "<i>Можно писать словами: «отчёт за 6 мес», «период май», "
+            "«касса за апрель», «долг».</i>"
         ),
         "help_section_legacy": (
-            "\n\nСмены (старый режим):\n"
+            "\n\n<b>⏱ Смены (старый режим)</b>\n"
             "/today /me_yesterday /week /month /me YYYY-MM\n"
-            "/quick_start /my_open /shifts /shift_info <id>\n"
+            "/quick_start /my_open /shifts /shift_info &lt;id&gt;\n"
             "/break_start /break_stop /break_status\n"
-            "/note <текст> /work_type <тип>\n"
+            "/note &lt;текст&gt; /work_type &lt;тип&gt;\n"
             "/export YYYY-MM — выгрузка в Excel"
         ),
         "help_section_sites": (
-            "\n\nОбъекты:\n"
-            "/sites /site_info <id> /sites_archive\n"
-            "/set_site_rate <id> <ставка>\n"
-            "/archive_site <id> /unarchive_site <id> /rename_site <id> <название>"
+            "\n\n<b>🏗 Объекты</b>\n"
+            "/sites /site_info &lt;id&gt; /sites_archive\n"
+            "/set_site_rate &lt;id&gt; &lt;ставка&gt;\n"
+            "/archive_site &lt;id&gt; /unarchive_site &lt;id&gt; "
+            "/rename_site &lt;id&gt; &lt;название&gt;"
         ),
         "help_section_geofence": (
-            "\n\nГеозоны:\n"
-            "/geofence_set <id> /geofence_save /geofence_cancel /geofence_clear <id>"
+            "\n\n<b>📍 Геозоны</b>\n"
+            "/geofence_set &lt;id&gt; /geofence_save /geofence_cancel "
+            "/geofence_clear &lt;id&gt;"
         ),
         "help_section_crews": (
-            "\n\nБригады:\n"
-            "/join <код> /invite /crew /leave_crew\n"
+            "\n\n<b>👥 Бригады</b>\n"
+            "/join &lt;код&gt; /invite /crew /leave_crew\n"
             "/crew_today /crew_week /crew_month /crew_export YYYY-MM\n"
             "/crew_advances [YYYY-MM] /crew_salary [YYYY-MM]\n"
-            "/add_foreman <tg_id> (владелец) /transfer_crew <tg_id> <crew_id> (владелец)"
+            "/add_foreman &lt;tg_id&gt; (владелец) "
+            "/transfer_crew &lt;tg_id&gt; &lt;crew_id&gt; (владелец)"
         ),
     },
 }

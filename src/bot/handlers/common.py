@@ -64,7 +64,7 @@ async def cmd_start(
 @router.message(Command("help"))
 async def cmd_help(message: Message) -> None:
     snap = await _snapshot()
-    await message.answer(_compose_help(snap))
+    await message.answer(_compose_help(snap), parse_mode="HTML")
 
 
 @router.message(Command("menu"))
