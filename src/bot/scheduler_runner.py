@@ -32,6 +32,8 @@ from src.services.digest import (
 from src.services.reminders import find_users_needing_reminder, mark_reminded
 from src.services.reminders_smart import aged_open_periods, users_with_gap
 from src.services.reports import compute_hours
+from src.services.reports.png import build_report_png
+from src.services.reports.service import get_report_data
 from src.services.scheduler import (
     auto_close_shift,
     find_long_open_shifts,
@@ -164,7 +166,13 @@ async def _maybe_send_daily_digest(bot: Bot, settings: Settings) -> None:
 
 
 async def _maybe_send_monthly_digest(bot: Bot, settings: Settings) -> None:
-    """On day 1 after the configured hour, DM the owner the previous month summary."""
+    """On day 1 after the configured hour, DM the owner the previous month summary.
+
+    Phase 7.5: also attaches a single-month PNG chart of the prior period
+    so the owner can eyeball «начислено vs получено» at a glance. PNG
+    generation is best-effort — if anything goes wrong (no data, matplotlib
+    error) we still deliver the text digest.
+    """
     global _last_monthly_digest_period
     if not settings.daily_digest_enabled:
         return
@@ -179,10 +187,36 @@ async def _maybe_send_monthly_digest(bot: Bot, settings: Settings) -> None:
     if _last_monthly_digest_period == period_key:
         return
     body = ""
+    owner_user: User | None = None
+    png_bytes: bytes | None = None
     async for session in get_session():
         body = await build_monthly_digest(session, tz, prev_year, prev_month)
+        owner_user = (
+            await session.execute(
+                select(User).where(User.tg_id == settings.owner_tg_id),
+            )
+        ).scalar_one_or_none()
+        if owner_user is not None:
+            try:
+                from datetime import date as _date
+
+                anchor = _date(prev_year, prev_month, 1)
+                data = await get_report_data(
+                    session, user=owner_user, tz=tz, today=anchor, months=1,
+                )
+                png_bytes = build_report_png(data, owner_user).getvalue()
+            except Exception:  # noqa: BLE001 — PNG is best-effort
+                logger.warning("monthly_digest_png_failed", exc_info=True)
     try:
         await bot.send_message(settings.owner_tg_id, body)
+        if png_bytes is not None:
+            from aiogram.types import BufferedInputFile
+
+            filename = f"report_{prev_year:04d}-{prev_month:02d}.png"
+            await bot.send_document(
+                settings.owner_tg_id,
+                BufferedInputFile(png_bytes, filename=filename),
+            )
         _last_monthly_digest_period = period_key
     except TelegramAPIError:
         logger.warning("monthly_digest_send_failed")
