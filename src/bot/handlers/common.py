@@ -8,9 +8,10 @@ from aiogram.types import Message
 
 from src.bot.handlers.accounting import cmd_cash, cmd_period
 from src.bot.handlers.calendar import cmd_calendar
-from src.bot.handlers.day_entries import cmd_h, cmd_my_days
+from src.bot.handlers.day_entries import cmd_h
 from src.bot.handlers.onboarding import start_wizard
 from src.bot.handlers.profile import cmd_profile
+from src.bot.handlers.report import cmd_report
 from src.bot.keyboards import simple_menu
 from src.bot.strings import t
 from src.core.db import get_session
@@ -100,9 +101,9 @@ async def btn_hours(message: Message, db_user: User | None = None) -> None:
     await cmd_h(message, _noargs(), db_user=db_user)
 
 
-@router.message(F.text == t("menu_btn_my_days"))
-async def btn_my_days(message: Message, db_user: User | None = None) -> None:
-    await cmd_my_days(message, db_user=db_user)
+@router.message(F.text == t("menu_btn_reports"))
+async def btn_reports(message: Message, db_user: User | None = None) -> None:
+    await cmd_report(message, _noargs(), db_user=db_user)
 
 
 @router.message(F.text == t("menu_btn_period"))

@@ -24,6 +24,7 @@ from src.bot.handlers import (
     notes,
     onboarding,
     profile,
+    report,
     reports,
     shift_edits,
     shifts,
@@ -124,6 +125,7 @@ _CORE_COMMANDS: list[BotCommand] = [
     BotCommand(command="period", description="Расчёт за период (часы + выплаты)"),
     BotCommand(command="cash", description="Денежный поток за месяц"),
     BotCommand(command="owed", description="Что ещё не выплачено"),
+    BotCommand(command="report", description="Отчёт за N месяцев: /report [N]"),
     BotCommand(command="my_days", description="Мои последние 14 дней"),
     BotCommand(command="profile", description="Профиль: имя, ставка, валюта, напоминание"),
     BotCommand(command="my_rate", description="Моя ставка"),
@@ -313,6 +315,7 @@ async def main() -> None:
     dp.include_router(advances.router)
     dp.include_router(accounting.router)
     dp.include_router(profile.router)
+    dp.include_router(report.router)
     dp.include_router(calendar_handler.router)
     dp.include_router(settings_handler.router)
 

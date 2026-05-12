@@ -495,7 +495,7 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
         "menu_btn_calendar": "📆 Календарь",
         "menu_btn_period": "📊 Период",
         "menu_btn_cash": "💸 Касса",
-        "menu_btn_my_days": "📅 Мои дни",
+        "menu_btn_reports": "📊 Отчёты",
         "menu_btn_profile": "⚙ Профиль",
         "menu_hint": "Главное меню. Жми кнопки или /help.",
         # Phase 6.6 — inline calendar
@@ -539,6 +539,24 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
         "cal_pay_recorded": (
             "✅ Выплата {amount} {currency} зачтена за {period} (выплачено {date})."
         ),
+        # Phase 6.11a — multi-month /report
+        "report_header": "📊 Отчёт за последние {months} мес.",
+        "report_row": (
+            "{period}: {hours} ч · начислено {earned} {currency} · "
+            "получено {received} {currency} · остаток {remaining} {currency} {tag}"
+        ),
+        "report_row_unpriced": "{period}: {hours} ч · (без ставки)",
+        "report_tag_settled": "✅",
+        "report_tag_pending": "⏳",
+        "report_tag_partial": "🟡",
+        "report_tag_overpaid": "🟢+",
+        "report_tag_unpriced": "❔",
+        "report_totals": (
+            "Итого: {hours} ч · начислено {earned} {currency} · "
+            "получено {received} {currency} · долг {owed} {currency}"
+        ),
+        "report_total_overpaid": "Переплата (всего): {overpaid} {currency}",
+        "report_bad_arg": "Использование: /report [N] — где N от 1 до 24 месяцев.",
         # Phase 6.7 — period / cashflow / owed accounting
         "period_pick_prompt": "📊 За какой месяц показать?",
         "period_older_btn": "◀ Раньше",

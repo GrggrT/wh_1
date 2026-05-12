@@ -35,10 +35,10 @@ def simple_menu(
 ) -> ReplyKeyboardMarkup:
     """Default reply keyboard for the single-user accounting product.
 
-    Layout (Phase 6.9):
+    Layout (Phase 6.11a):
       [🕒 Часы за сегодня] [📆 Календарь]
       [📊 Период]          [💸 Касса]
-      [📅 Мои дни]         [⚙ Профиль]
+      [📊 Отчёты]          [⚙ Профиль]
     Plus optional crews row when the matching toggle is on.
     """
     rows: list[list[KeyboardButton]] = [
@@ -51,7 +51,7 @@ def simple_menu(
             KeyboardButton(text=t("menu_btn_cash")),
         ],
         [
-            KeyboardButton(text=t("menu_btn_my_days")),
+            KeyboardButton(text=t("menu_btn_reports")),
             KeyboardButton(text=t("menu_btn_profile")),
         ],
     ]
