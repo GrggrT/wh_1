@@ -38,7 +38,7 @@ def simple_menu(
     Layout (Phase 6.11a):
       [🕒 Часы за сегодня] [📆 Календарь]
       [📊 Период]          [💸 Касса]
-      [📊 Отчёты]          [⚙ Профиль]
+      [📈 Отчёты]          [⚙ Профиль]
     Plus optional crews row when the matching toggle is on.
     """
     rows: list[list[KeyboardButton]] = [

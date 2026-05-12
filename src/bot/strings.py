@@ -436,7 +436,7 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
         ),
         "remind_bad_hour": "Час должен быть числом от 0 до 23.",
         "remind_on_ok": (
-            "Вечернее напоминание включено: в {hour}:00 (часовой пояс сервера)."
+            "Вечернее напоминание включено: в {hour}:00 по твоему часовому поясу."
         ),
         "remind_off_ok": "Вечернее напоминание выключено.",
         # Phase 5.4 — feature toggles
@@ -482,10 +482,12 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
         "onb_done": (
             "Готово! Используй кнопки ниже:\n"
             "🕒 Часы за сегодня — поставить часы\n"
-            "📅 Мои дни — последние 14 дней\n"
-            "💰 Зарплата — расчёт за месяц\n"
-            "💵 Авансы — мои авансы\n\n"
-            "Всё через /help."
+            "📆 Календарь — редактировать любую дату\n"
+            "📊 Период — расчёт за месяц\n"
+            "💸 Касса — авансы и выплаты\n"
+            "📈 Отчёты — сводка за N месяцев\n"
+            "⚙ Профиль — имя, ставка, валюта, напоминание\n\n"
+            "Все команды — /help."
         ),
         "onb_cancelled": (
             "Настройка прервана. Запусти ещё раз через /start, когда будешь готов."
@@ -495,14 +497,14 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
         "menu_btn_calendar": "📆 Календарь",
         "menu_btn_period": "📊 Период",
         "menu_btn_cash": "💸 Касса",
-        "menu_btn_reports": "📊 Отчёты",
+        "menu_btn_reports": "📈 Отчёты",
         "menu_btn_profile": "⚙ Профиль",
         "menu_hint": "Главное меню. Жми кнопки или /help.",
         # Phase 6.6 — inline calendar
         "cal_header": "📆 {month} {year}\nЖми на дату, чтобы открыть.",
         "cal_legend": "• часы  🌴 выходной  💵 аванс  💰 выплата",
-        "cal_btn_fill_workweek": "💼 Заполнить будни (8 ч)",
-        "cal_fill_result": "Добавлено будних дней: {n} × 8 ч.",
+        "cal_btn_fill_workweek": "💼 Заполнить будни (10 ч)",
+        "cal_fill_result": "Добавлено будних дней: {n} × 10 ч.",
         "cal_fill_none": "Будни уже отмечены.",
         "cal_day_header": "📅 {date}",
         "cal_day_no_entry": "Часы: не указаны",
@@ -563,7 +565,7 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
         "report_btn_xlsx": "📥 XLSX",
         "report_btn_pdf": "📄 PDF",
         "report_btn_png": "📈 PNG",
-        "report_menu_prompt": "📊 За какой период?",
+        "report_menu_prompt": "📈 За какой период?",
         "report_menu_1m": "1 мес",
         "report_menu_3m": "3 мес",
         "report_menu_6m": "6 мес",
