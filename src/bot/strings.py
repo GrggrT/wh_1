@@ -571,6 +571,24 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
             "📦 Резервная копия\n"
             "Дней: {days}  ·  Авансов: {advances}  ·  Выплат: {payments}"
         ),
+        # Phase 7.2 — smart reminders
+        "gap_nudge_with_last": (
+            "👋 Давно не виделись. Последняя запись часов: {last_day}.\n"
+            "Уже {gap} рабочих дня(-ей) без отметок — добавишь сейчас?"
+        ),
+        "gap_nudge_no_entries": (
+            "👋 Я не вижу у тебя пока ни одной записи часов.\n"
+            "Поставь часы за сегодня командой /h 8 или открой /calendar."
+        ),
+        "debt_ping_header": (
+            "💼 Старые незакрытые периоды (более 30 дней):"
+        ),
+        "debt_ping_row": (
+            "• {period} — остаток {remaining} {currency}"
+        ),
+        "debt_ping_footer": (
+            "Итого: {total} {currency}. Подробнее: /owed"
+        ),
         # Phase 6.7 — period / cashflow / owed accounting
         "period_pick_prompt": "📊 За какой месяц показать?",
         "period_older_btn": "◀ Раньше",

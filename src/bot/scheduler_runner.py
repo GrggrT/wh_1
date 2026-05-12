@@ -8,11 +8,13 @@ from zoneinfo import ZoneInfo
 import structlog
 from aiogram import Bot
 from aiogram.exceptions import TelegramAPIError
+from sqlalchemy import select
 
 from src.bot.handlers.day_entries import quick_keyboard
 from src.bot.strings import t
 from src.core.config import Settings
 from src.core.db import get_session
+from src.core.models import User
 from src.services.breaks import auto_close_break, find_stale_open_breaks
 from src.services.day_entries import (
     format_hours,
@@ -28,6 +30,7 @@ from src.services.digest import (
     previous_month,
 )
 from src.services.reminders import find_users_needing_reminder, mark_reminded
+from src.services.reminders_smart import aged_open_periods, users_with_gap
 from src.services.reports import compute_hours
 from src.services.scheduler import (
     auto_close_shift,
@@ -43,6 +46,16 @@ logger = structlog.get_logger()
 _last_digest_date: date | None = None
 _last_monthly_digest_period: tuple[int, int] | None = None
 _last_weekly_digest_iso_week: tuple[int, int] | None = None
+# Phase 7.2: in-memory per-user state for the smart reminders. Single-tenant
+# bot, so a process-local dict is sufficient; a deploy restart at worst
+# resends one nudge.
+_last_gap_nudge_by_user: dict[int, date] = {}
+_last_debt_ping_iso_week_by_user: dict[int, tuple[int, int]] = {}
+
+_RU_MONTHS_SCH: tuple[str, ...] = (
+    "Январь", "Февраль", "Март", "Апрель", "Май", "Июнь",
+    "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь",
+)
 
 
 async def _process_once(bot: Bot, settings: Settings) -> None:
@@ -226,6 +239,94 @@ async def _maybe_send_day_reminders(bot: Bot, settings: Settings) -> None:
         await session.commit()
 
 
+async def _maybe_send_gap_nudges(bot: Bot, settings: Settings) -> None:
+    """Once per day, after the daily-reminder hour, nudge users who haven't
+    logged hours in 3+ business days. Skips users already nudged today.
+    """
+    tz = ZoneInfo(settings.timezone)
+    now_local = datetime.now(tz=tz)
+    today = now_local.date()
+    if now_local.hour < settings.daily_digest_hour:
+        return
+    async for session in get_session():
+        gaps = await users_with_gap(session, today=today, gap_business_days=3)
+        for info in gaps:
+            if _last_gap_nudge_by_user.get(info.user.id) == today:
+                continue
+            if info.last_day is None:
+                text = t("gap_nudge_no_entries")
+            else:
+                text = t(
+                    "gap_nudge_with_last",
+                    last_day=info.last_day.isoformat(),
+                    gap=info.gap_business_days,
+                )
+            try:
+                await bot.send_message(info.user.tg_id, text)
+                _last_gap_nudge_by_user[info.user.id] = today
+            except TelegramAPIError:
+                logger.warning("gap_nudge_send_failed", user_id=info.user.id)
+        # Read-only flow but commit anyway to keep the session pattern consistent.
+        await session.commit()
+
+
+async def _maybe_send_debt_pings(bot: Bot, settings: Settings) -> None:
+    """On Monday after the digest hour, DM each user a summary of periods
+    older than 30 days that are still pending/partial. At most once per
+    ISO week per user.
+    """
+    tz = ZoneInfo(settings.timezone)
+    now_local = datetime.now(tz=tz)
+    if now_local.weekday() != 0:  # Monday only
+        return
+    if now_local.hour < settings.daily_digest_hour:
+        return
+    today = now_local.date()
+    iso_year, iso_week, _ = today.isocalendar()
+    iso_key = (iso_year, iso_week)
+    async for session in get_session():
+        users = (await session.execute(select(User))).scalars().all()
+        for u in users:
+            if _last_debt_ping_iso_week_by_user.get(u.id) == iso_key:
+                continue
+            aged = await aged_open_periods(
+                session, user=u, tz=tz, today=today, min_age_days=30,
+            )
+            if not aged:
+                _last_debt_ping_iso_week_by_user[u.id] = iso_key
+                continue
+            lines = [t("debt_ping_header")]
+            total = Decimal(0)
+            for led in aged:
+                remaining = led.remaining
+                if remaining is None:
+                    continue
+                total += remaining
+                period = f"{_RU_MONTHS_SCH[led.month - 1]} {led.year}"
+                lines.append(
+                    t(
+                        "debt_ping_row",
+                        period=period,
+                        remaining=f"{remaining:.2f}",
+                        currency=u.currency,
+                    ),
+                )
+            lines.append("")
+            lines.append(
+                t(
+                    "debt_ping_footer",
+                    total=f"{total.quantize(Decimal('0.01')):.2f}",
+                    currency=u.currency,
+                ),
+            )
+            try:
+                await bot.send_message(u.tg_id, "\n".join(lines))
+                _last_debt_ping_iso_week_by_user[u.id] = iso_key
+            except TelegramAPIError:
+                logger.warning("debt_ping_send_failed", user_id=u.id)
+        await session.commit()
+
+
 async def _maybe_reassert_webhook(bot: Bot, settings: Settings) -> None:
     """Self-heal: if the webhook registration drifted away from our URL
     (e.g., wiped by an overlapping deploy's shutdown), re-register it.
@@ -284,6 +385,8 @@ async def run_scheduler(bot: Bot, settings: Settings) -> None:
             await _maybe_send_weekly_digest(bot, settings)
             await _maybe_send_monthly_digest(bot, settings)
             await _maybe_send_day_reminders(bot, settings)
+            await _maybe_send_gap_nudges(bot, settings)
+            await _maybe_send_debt_pings(bot, settings)
         except Exception:  # noqa: BLE001
             logger.exception("scheduler_iteration_failed")
         await asyncio.sleep(interval)
