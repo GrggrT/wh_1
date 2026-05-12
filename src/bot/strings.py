@@ -506,6 +506,7 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
         "cal_day_off_line": "🌴 Выходной",
         "cal_day_hours": "Часы: {hours}",
         "cal_day_advances": "💵 Авансов: {n} на сумму {total} {currency}",
+        "cal_day_advance_row": "  · {amount} {currency} за период {period}",
         "cal_day_payments": "💰 Выплат: {n} на сумму {total} {currency}",
         "cal_day_payment_row": "  · {amount} {currency} за период {period}",
         "cal_btn_set_hours": "🕒 Поставить часы",
@@ -515,11 +516,17 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
         "cal_btn_back": "◀ К месяцу",
         "cal_btn_back_to_day": "◀ К дню",
         "cal_pick_hours": "Выбери часы за {date}:",
+        "cal_advance_pick_period": (
+            "💵 Аванс выдан {date}.\n"
+            "За какой период? (аванс 5 мая может быть за апрель)"
+        ),
         "cal_advance_prompt": (
-            "Введи сумму аванса за {date} ({currency}). "
+            "Введи сумму аванса за {period} (выдано {date}, {currency}). "
             "Например: 200 или 350.50. /cancel — отмена."
         ),
-        "cal_advance_recorded": "✅ Аванс {amount} {currency} за {date} записан.",
+        "cal_advance_recorded": (
+            "✅ Аванс {amount} {currency} зачтён за {period} (выдан {date})."
+        ),
         "cal_pay_pick_period": (
             "💰 Выплата зарплаты {date}.\n"
             "За какой период? (зарплата за апрель может быть выплачена в мае)"

@@ -11,7 +11,8 @@ Callback grammar (all comfortably under Telegram's 64-byte limit):
   cal:day:YYYY-MM-DD         -> open day detail
   cal:hrs:YYYY-MM-DD         -> open hours picker for day
   cal:set:YYYY-MM-DD:H       -> set H hours for day (0 = day off)
-  cal:adv:YYYY-MM-DD         -> start advance amount entry (FSM)
+  cal:adv:YYYY-MM-DD         -> show period picker for advance
+  cal:apr:YYYY-MM-DD:YYYY-MM -> select period -> start advance amount entry (FSM)
   cal:pay:YYYY-MM-DD         -> show period picker for salary payment
   cal:per:YYYY-MM-DD:YYYY-MM -> select period -> start payment amount entry
   cal:noop                   -> placeholder (month header / blank cell)
@@ -65,6 +66,7 @@ _DAY = _NS + "day:"
 _HRS = _NS + "hrs:"
 _SET = _NS + "set:"
 _ADV = _NS + "adv:"
+_APR = _NS + "apr:"
 _PAY = _NS + "pay:"
 _PER = _NS + "per:"
 _NOOP = _NS + "noop"
@@ -213,6 +215,15 @@ async def _build_day_view(
                 currency=currency,
             ),
         )
+        for a in advs:
+            lines.append(
+                t(
+                    "cal_day_advance_row",
+                    amount=f"{a.amount:.2f}",
+                    period=f"{a.period_year}-{a.period_month:02d}",
+                    currency=currency,
+                ),
+            )
     if pays:
         total_p = sum((p.amount for p in pays), Decimal(0))
         lines.append(
@@ -273,11 +284,14 @@ def _hours_picker_keyboard(day: date) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
-def _period_keyboard(paid_on: date) -> InlineKeyboardMarkup:
+def _period_keyboard(paid_on: date, prefix: str = _PER) -> InlineKeyboardMarkup:
     """Three quick period options (prev, current, prev-prev) + cancel.
 
     Defaults are anchored to the payment date because in practice salary is
     paid right after the period ends — "prev month" is the dominant case.
+    The same keyboard serves the advance flow (prefix=_APR) where the cash
+    date may still be in the period it covers (early-month advance) or in
+    the following month (catch-up at month start).
     """
     py_curr, pm_curr = paid_on.year, paid_on.month
     py_prev, pm_prev = _prev_month(py_curr, pm_curr)
@@ -288,7 +302,7 @@ def _period_keyboard(paid_on: date) -> InlineKeyboardMarkup:
         return [
             InlineKeyboardButton(
                 text=t("cal_per_btn", month=_RU_MONTHS[month - 1], year=year),
-                callback_data=f"{_PER}{iso}:{year}-{month:02d}",
+                callback_data=f"{prefix}{iso}:{year}-{month:02d}",
             ),
         ]
 
@@ -436,9 +450,7 @@ async def cb_set_hours(
 
 @router.callback_query(F.data.startswith(_ADV))
 async def cb_advance_start(
-    query: CallbackQuery,
-    state: FSMContext,
-    db_user: User | None = None,
+    query: CallbackQuery, db_user: User | None = None,
 ) -> None:
     if db_user is None or query.data is None:
         await query.answer()
@@ -448,13 +460,46 @@ async def cb_advance_start(
     except ValueError:
         await query.answer()
         return
+    if isinstance(query.message, Message):
+        with contextlib.suppress(Exception):
+            await query.message.edit_text(
+                t("cal_advance_pick_period", date=day.isoformat()),
+                reply_markup=_period_keyboard(day, prefix=_APR),
+            )
+    await query.answer()
+
+
+@router.callback_query(F.data.startswith(_APR))
+async def cb_advance_period(
+    query: CallbackQuery,
+    state: FSMContext,
+    db_user: User | None = None,
+) -> None:
+    if db_user is None or query.data is None:
+        await query.answer()
+        return
+    raw = query.data[len(_APR) :]
+    try:
+        iso, period = raw.split(":")
+        day = date.fromisoformat(iso)
+        year_s, month_s = period.split("-")
+        year, month = int(year_s), int(month_s)
+    except ValueError:
+        await query.answer()
+        return
+    if not (1 <= month <= 12) or not (2000 <= year <= 2100):
+        await query.answer()
+        return
     await state.set_state(CalendarFlow.awaiting_advance_amount)
-    await state.update_data(day=day.isoformat())
+    await state.update_data(
+        day=day.isoformat(), period_year=year, period_month=month,
+    )
     if isinstance(query.message, Message):
         await query.message.answer(
             t(
                 "cal_advance_prompt",
                 date=day.isoformat(),
+                period=f"{year}-{month:02d}",
                 currency=db_user.currency,
             ),
         )
@@ -476,7 +521,9 @@ async def msg_advance_amount(
     data = await state.get_data()
     try:
         day = date.fromisoformat(str(data.get("day") or ""))
-    except ValueError:
+        year = int(data["period_year"])
+        month = int(data["period_month"])
+    except (KeyError, TypeError, ValueError):
         await state.clear()
         return
     async for session in get_session():
@@ -486,6 +533,8 @@ async def msg_advance_amount(
             amount=amount,
             recorded_by_id=db_user.id,
             day=day,
+            period_year=year,
+            period_month=month,
             note=None,
         )
         await session.commit()
@@ -498,6 +547,7 @@ async def msg_advance_amount(
             "cal_advance_recorded",
             amount=f"{amount:.2f}",
             date=day.isoformat(),
+            period=f"{year}-{month:02d}",
             currency=db_user.currency,
         ),
     )

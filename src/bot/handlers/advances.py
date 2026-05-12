@@ -18,9 +18,8 @@ from src.core.db import get_session
 from src.core.models import User
 from src.services.advances import (
     compute_salary,
-    list_advances,
-    list_advances_for_users,
-    month_bounds,
+    list_advances_for_period,
+    list_advances_for_users_period,
     parse_amount,
     parse_year_month,
     record_advance,
@@ -145,10 +144,9 @@ async def cmd_my_advances(
         year, month = ym
     else:
         year, month = _current_year_month(tz)
-    first_day, last_day = month_bounds(year, month)
     async for session in get_session():
-        rows = await list_advances(
-            session, user_id=db_user.id, start=first_day, end=last_day,
+        rows = await list_advances_for_period(
+            session, user_id=db_user.id, year=year, month=month,
         )
     if not rows:
         await message.answer(t("advances_empty"))
@@ -193,7 +191,6 @@ async def cmd_crew_advances(
         year, month = ym
     else:
         year, month = _current_year_month(tz)
-    first_day, last_day = month_bounds(year, month)
 
     async for session in get_session():
         if db_user.role == ROLE_FOREMAN:
@@ -207,8 +204,8 @@ async def cmd_crew_advances(
                 (await session.execute(select(User))).scalars().all(),
             )
         member_ids = [m.id for m in members]
-        grouped = await list_advances_for_users(
-            session, user_ids=member_ids, start=first_day, end=last_day,
+        grouped = await list_advances_for_users_period(
+            session, user_ids=member_ids, year=year, month=month,
         )
 
     names = {m.id: m.name for m in members}

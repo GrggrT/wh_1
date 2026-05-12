@@ -202,6 +202,8 @@ class Advance(Base):
         BigInteger, ForeignKey("users.id", ondelete="CASCADE"), nullable=False,
     )
     day: Mapped[date] = mapped_column(Date, nullable=False)
+    period_year: Mapped[int] = mapped_column(Integer, nullable=False)
+    period_month: Mapped[int] = mapped_column(Integer, nullable=False)
     amount: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
     note: Mapped[str | None] = mapped_column(Text)
     recorded_by_id: Mapped[int] = mapped_column(

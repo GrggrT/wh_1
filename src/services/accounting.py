@@ -9,11 +9,11 @@ Key invariants
 ~~~~~~~~~~~~~~
 - ``period_year`` + ``period_month`` always identify the work period the
   cash covers (independent of when cash was paid).
-- ``Advance.day`` is treated as both the physical payment date *and* the
-  period it counts against. The single-user bot uses advances as "this
-  month's running mini-payouts", so we keep them simple.
-- ``SalaryPayment`` is the only entity where ``paid_on`` and the period
-  may legitimately differ — and that is exactly why this module exists.
+- ``Advance.day`` is the physical cash date; ``Advance.period_year`` +
+  ``Advance.period_month`` is the work period it counts against. They
+  default to the same calendar month but can legitimately differ — e.g.
+  an advance handed over on May 5 for April work (Phase 6.10b).
+- ``SalaryPayment`` separates ``paid_on`` from period in the same way.
 
 Status values
 ~~~~~~~~~~~~~
@@ -124,8 +124,9 @@ async def get_period_ledger(
 
     Earnings are reused from ``compute_salary`` so any future change to the
     pricing logic (site rates, breaks, etc.) flows through here for free.
-    Advances are pulled by ``Advance.day`` falling in the period; payments
-    are pulled by their declared ``period_year`` + ``period_month``.
+    Both advances and payments are pulled by their declared
+    ``period_year`` + ``period_month`` — cash paid in a different calendar
+    month attributes back to the work period it covers.
     """
     breakdown = await compute_salary(
         session, user=user, year=year, month=month, tz=tz,
@@ -138,8 +139,8 @@ async def get_period_ledger(
                 select(Advance)
                 .where(
                     Advance.user_id == user.id,
-                    Advance.day >= first_day,
-                    Advance.day <= last_day,
+                    Advance.period_year == year,
+                    Advance.period_month == month,
                 )
                 .order_by(desc(Advance.day), desc(Advance.id)),
             )
@@ -179,8 +180,8 @@ async def list_cashflow(
 ) -> list[CashflowEntry]:
     """Every cash event between ``start`` and ``end`` (inclusive), newest first.
 
-    Advances carry their own month as their period. Payments carry the
-    declared accounting period (often differs from ``paid_on``).
+    Both advances and payments carry their declared accounting period,
+    which may differ from the cash date (Phase 6.10b for advances).
     """
     advances = list(
         (
@@ -213,8 +214,8 @@ async def list_cashflow(
                 kind="advance",
                 day=a.day,
                 amount=a.amount,
-                period_year=a.day.year,
-                period_month=a.day.month,
+                period_year=a.period_year,
+                period_month=a.period_month,
                 note=a.note,
             ),
         )

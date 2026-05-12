@@ -44,7 +44,11 @@ from src.services.accounting import (
     list_cashflow,
     list_open_periods,
 )
-from src.services.advances import SalaryBreakdown, record_advance
+from src.services.advances import (
+    SalaryBreakdown,
+    list_advances_for_period,
+    record_advance,
+)
 from src.services.salary_payments import record_payment
 
 
@@ -405,3 +409,105 @@ def test_period_picker_keyboard_callback_data_fits_64_bytes() -> None:
         for btn in row:
             assert btn.callback_data is not None
             assert len(btn.callback_data.encode("utf-8")) <= 64
+
+
+# --- Phase 6.10b: advance ↔ period attribution -------------------------
+
+
+async def test_record_advance_defaults_period_to_day(
+    session: AsyncSession,
+) -> None:
+    user = await _seed_user(session)
+    adv = await record_advance(
+        session, user_id=user.id, amount=Decimal("100"),
+        recorded_by_id=user.id, day=date(2026, 5, 10),
+    )
+    assert (adv.period_year, adv.period_month) == (2026, 5)
+
+
+async def test_record_advance_explicit_period_overrides_day(
+    session: AsyncSession,
+) -> None:
+    """An advance physically paid May 5 may cover the April period."""
+    user = await _seed_user(session)
+    adv = await record_advance(
+        session, user_id=user.id, amount=Decimal("200"),
+        recorded_by_id=user.id, day=date(2026, 5, 5),
+        period_year=2026, period_month=4,
+    )
+    assert adv.day == date(2026, 5, 5)
+    assert (adv.period_year, adv.period_month) == (2026, 4)
+
+
+async def test_period_ledger_uses_declared_period_for_advances(
+    session: AsyncSession, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Advance paid May 5 for April → counts toward April, NOT May."""
+    user = await _seed_user(session)
+    _stub_compute_salary(monkeypatch, hours=Decimal("160"), earnings=Decimal("8000"))
+
+    await record_advance(
+        session, user_id=user.id, amount=Decimal("500"),
+        recorded_by_id=user.id, day=date(2026, 5, 5),
+        period_year=2026, period_month=4,
+    )
+    await session.commit()
+
+    apr = await get_period_ledger(
+        session, user=user, year=2026, month=4, tz=_TZ,
+    )
+    may = await get_period_ledger(
+        session, user=user, year=2026, month=5, tz=_TZ,
+    )
+    assert apr.advances_total == Decimal("500.00")
+    assert may.advances_total == Decimal("0.00")
+
+
+async def test_cashflow_attributes_advance_to_declared_period(
+    session: AsyncSession,
+) -> None:
+    """/cash for May shows the May-5 advance with April period tag."""
+    user = await _seed_user(session)
+    await record_advance(
+        session, user_id=user.id, amount=Decimal("500"),
+        recorded_by_id=user.id, day=date(2026, 5, 5),
+        period_year=2026, period_month=4,
+    )
+    await session.commit()
+    rows = await list_cashflow(
+        session, user=user, start=date(2026, 5, 1), end=date(2026, 5, 31),
+    )
+    assert len(rows) == 1
+    assert rows[0].kind == "advance"
+    assert (rows[0].period_year, rows[0].period_month) == (2026, 4)
+
+
+async def test_list_advances_for_period_filters_by_declared_period(
+    session: AsyncSession,
+) -> None:
+    user = await _seed_user(session)
+    # April advance, paid in April.
+    await record_advance(
+        session, user_id=user.id, amount=Decimal("100"),
+        recorded_by_id=user.id, day=date(2026, 4, 20),
+    )
+    # April advance, paid late on May 5.
+    await record_advance(
+        session, user_id=user.id, amount=Decimal("200"),
+        recorded_by_id=user.id, day=date(2026, 5, 5),
+        period_year=2026, period_month=4,
+    )
+    # May advance, paid in May.
+    await record_advance(
+        session, user_id=user.id, amount=Decimal("300"),
+        recorded_by_id=user.id, day=date(2026, 5, 10),
+    )
+    await session.commit()
+    apr = await list_advances_for_period(
+        session, user_id=user.id, year=2026, month=4,
+    )
+    assert sum((a.amount for a in apr), Decimal(0)) == Decimal("300")
+    may = await list_advances_for_period(
+        session, user_id=user.id, year=2026, month=5,
+    )
+    assert sum((a.amount for a in may), Decimal(0)) == Decimal("300")

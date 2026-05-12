@@ -75,12 +75,25 @@ async def record_advance(
     amount: Decimal,
     recorded_by_id: int,
     day: date,
+    period_year: int | None = None,
+    period_month: int | None = None,
     note: str | None = None,
 ) -> Advance:
+    """Record a cash advance.
+
+    ``day`` is the physical cash date. ``period_year``/``period_month`` is the
+    accounting period the cash counts against (Phase 6.10b). When the period
+    is omitted it defaults to the cash date's month, matching pre-6.10b
+    semantics for callers that don't yet pass an explicit period.
+    """
+    py = period_year if period_year is not None else day.year
+    pm = period_month if period_month is not None else day.month
     advance = Advance(
         user_id=user_id,
         amount=amount,
         day=day,
+        period_year=py,
+        period_month=pm,
         recorded_by_id=recorded_by_id,
         note=note,
     )
@@ -119,7 +132,7 @@ async def list_advances_for_users(
     start: date,
     end: date,
 ) -> dict[int, list[Advance]]:
-    """Advances grouped by user_id for the given period."""
+    """Advances grouped by user_id, filtered by cash-date range."""
     if not user_ids:
         return {}
     rows = list(
@@ -130,6 +143,58 @@ async def list_advances_for_users(
                     Advance.user_id.in_(user_ids),
                     Advance.day >= start,
                     Advance.day <= end,
+                )
+                .order_by(desc(Advance.day)),
+            )
+        ).scalars().all(),
+    )
+    grouped: dict[int, list[Advance]] = {uid: [] for uid in user_ids}
+    for a in rows:
+        grouped.setdefault(a.user_id, []).append(a)
+    return grouped
+
+
+async def list_advances_for_period(
+    session: AsyncSession,
+    *,
+    user_id: int,
+    year: int,
+    month: int,
+) -> list[Advance]:
+    """Advances declared for the (year, month) accounting period."""
+    return list(
+        (
+            await session.execute(
+                select(Advance)
+                .where(
+                    Advance.user_id == user_id,
+                    Advance.period_year == year,
+                    Advance.period_month == month,
+                )
+                .order_by(desc(Advance.day), desc(Advance.id)),
+            )
+        ).scalars().all(),
+    )
+
+
+async def list_advances_for_users_period(
+    session: AsyncSession,
+    *,
+    user_ids: list[int],
+    year: int,
+    month: int,
+) -> dict[int, list[Advance]]:
+    """Advances grouped by user_id, filtered by accounting period."""
+    if not user_ids:
+        return {}
+    rows = list(
+        (
+            await session.execute(
+                select(Advance)
+                .where(
+                    Advance.user_id.in_(user_ids),
+                    Advance.period_year == year,
+                    Advance.period_month == month,
                 )
                 .order_by(desc(Advance.day)),
             )
@@ -278,8 +343,8 @@ async def compute_salary(
         shift_hours += compute_hours(eff_start, eff_end)
     shift_hours = shift_hours.quantize(Decimal("0.01"))
 
-    advances = await list_advances(
-        session, user_id=user.id, start=first_day, end=last_day,
+    advances = await list_advances_for_period(
+        session, user_id=user.id, year=year, month=month,
     )
     advances_total = sum(
         (a.amount for a in advances), Decimal(0),
