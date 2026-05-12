@@ -533,6 +533,8 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
             "✅ Выплата {amount} {currency} зачтена за {period} (выплачено {date})."
         ),
         # Phase 6.7 — period / cashflow / owed accounting
+        "period_pick_prompt": "📊 За какой месяц показать?",
+        "period_older_btn": "◀ Раньше",
         "period_header": "📊 Период {month} {year}",
         "period_hours_rate": "Часы: {hours}  ·  Ставка: {rate}",
         "period_no_rate": "Часы: {hours}  ·  Ставка: не задана",

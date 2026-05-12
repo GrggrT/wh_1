@@ -16,13 +16,19 @@ conflated:
 
 from __future__ import annotations
 
+import contextlib
 from datetime import datetime
 from decimal import Decimal
 from zoneinfo import ZoneInfo
 
-from aiogram import Router
+from aiogram import F, Router
 from aiogram.filters import Command, CommandObject
-from aiogram.types import Message
+from aiogram.types import (
+    CallbackQuery,
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+    Message,
+)
 
 from src.bot.strings import t
 from src.core.config import get_settings
@@ -254,11 +260,68 @@ def format_owed(ledgers: list[PeriodLedger], currency: str) -> str:
     return "\n".join(lines)
 
 
+_PER_SHOW = "per:show:"   # per:show:YYYY-MM
+_PER_OLDER = "per:older:"  # per:older:YYYY-MM (oldest shown in current page)
+
+
+def _shift_month(year: int, month: int, delta: int) -> tuple[int, int]:
+    """Return (year, month) shifted by ``delta`` months (negative = earlier)."""
+    idx = year * 12 + (month - 1) + delta
+    return idx // 12, (idx % 12) + 1
+
+
+def period_picker_keyboard(
+    anchor_year: int, anchor_month: int, page_size: int = 6,
+) -> InlineKeyboardMarkup:
+    """Inline keyboard listing ``page_size`` months ending at the anchor.
+
+    Anchor = newest month on the page. The «◀ Раньше» button shifts the
+    window back by ``page_size`` months.
+    """
+    months: list[tuple[int, int]] = []
+    for i in range(page_size):
+        y, m = _shift_month(anchor_year, anchor_month, -i)
+        months.append((y, m))
+    rows: list[list[InlineKeyboardButton]] = []
+    # Two columns.
+    for i in range(0, len(months), 2):
+        row: list[InlineKeyboardButton] = []
+        for y, m in months[i : i + 2]:
+            row.append(
+                InlineKeyboardButton(
+                    text=_period_label(y, m),
+                    callback_data=f"{_PER_SHOW}{y}-{m:02d}",
+                ),
+            )
+        rows.append(row)
+    older_y, older_m = _shift_month(anchor_year, anchor_month, -page_size)
+    rows.append(
+        [
+            InlineKeyboardButton(
+                text=t("period_older_btn"),
+                callback_data=f"{_PER_OLDER}{older_y}-{older_m:02d}",
+            ),
+        ],
+    )
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
+
+async def _send_period(
+    message: Message, db_user: User, year: int, month: int,
+) -> None:
+    tz = ZoneInfo(get_settings().timezone)
+    async for session in get_session():
+        ledger = await get_period_ledger(
+            session, user=db_user, year=year, month=month, tz=tz,
+        )
+    await message.answer(format_period(ledger, db_user))
+
+
 @router.message(Command("period"))
 async def cmd_period(
     message: Message, command: CommandObject, db_user: User | None = None,
 ) -> None:
-    """``/period`` (current month) or ``/period YYYY-MM``."""
+    """``/period`` shows the month picker; ``/period YYYY-MM`` renders directly."""
     if db_user is None:
         return
     tz = ZoneInfo(get_settings().timezone)
@@ -268,13 +331,50 @@ async def cmd_period(
             await message.answer(t("month_format"))
             return
         year, month = ym
-    else:
-        year, month = _current_year_month(tz)
-    async for session in get_session():
-        ledger = await get_period_ledger(
-            session, user=db_user, year=year, month=month, tz=tz,
-        )
-    await message.answer(format_period(ledger, db_user))
+        await _send_period(message, db_user, year, month)
+        return
+    year, month = _current_year_month(tz)
+    await message.answer(
+        t("period_pick_prompt"),
+        reply_markup=period_picker_keyboard(year, month),
+    )
+
+
+@router.callback_query(F.data.startswith(_PER_SHOW))
+async def cb_period_show(
+    query: CallbackQuery, db_user: User | None = None,
+) -> None:
+    if db_user is None or query.data is None:
+        await query.answer()
+        return
+    ym = parse_year_month(query.data[len(_PER_SHOW):])
+    if ym is None:
+        await query.answer()
+        return
+    year, month = ym
+    if isinstance(query.message, Message):
+        await _send_period(query.message, db_user, year, month)
+    await query.answer()
+
+
+@router.callback_query(F.data.startswith(_PER_OLDER))
+async def cb_period_older(
+    query: CallbackQuery, db_user: User | None = None,
+) -> None:
+    if db_user is None or query.data is None:
+        await query.answer()
+        return
+    ym = parse_year_month(query.data[len(_PER_OLDER):])
+    if ym is None:
+        await query.answer()
+        return
+    year, month = ym
+    if isinstance(query.message, Message):
+        with contextlib.suppress(Exception):
+            await query.message.edit_reply_markup(
+                reply_markup=period_picker_keyboard(year, month),
+            )
+    await query.answer()
 
 
 @router.message(Command("cash"))

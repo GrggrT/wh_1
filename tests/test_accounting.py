@@ -368,3 +368,40 @@ async def test_list_open_periods_excludes_settled(
     months = {(p.year, p.month) for p in open_periods}
     assert (2026, 4) not in months  # settled — not owed
     assert (2026, 5) in months      # current month still unpaid
+
+
+# --- Phase 6.10a: month picker keyboard ---------------------------------
+
+
+def test_shift_month_back_within_year() -> None:
+    from src.bot.handlers.accounting import _shift_month
+    assert _shift_month(2026, 5, -1) == (2026, 4)
+
+
+def test_shift_month_rolls_over_january() -> None:
+    from src.bot.handlers.accounting import _shift_month
+    assert _shift_month(2026, 1, -1) == (2025, 12)
+    assert _shift_month(2026, 3, -6) == (2025, 9)
+
+
+def test_period_picker_keyboard_has_six_months_plus_older() -> None:
+    from src.bot.handlers.accounting import period_picker_keyboard
+    kb = period_picker_keyboard(2026, 5)
+    # 3 rows of 2 months + 1 row for «Раньше».
+    assert len(kb.inline_keyboard) == 4
+    cb_first = kb.inline_keyboard[0][0].callback_data or ""
+    cb_last_month = kb.inline_keyboard[2][1].callback_data or ""
+    older = kb.inline_keyboard[3][0].callback_data or ""
+    assert cb_first.endswith("2026-05")  # anchor month = newest
+    assert cb_last_month.endswith("2025-12")  # 6th-back from May 2026
+    assert older.startswith("per:older:")
+    assert older.endswith("2025-11")  # anchor shifts back by page_size
+
+
+def test_period_picker_keyboard_callback_data_fits_64_bytes() -> None:
+    from src.bot.handlers.accounting import period_picker_keyboard
+    kb = period_picker_keyboard(2026, 12)
+    for row in kb.inline_keyboard:
+        for btn in row:
+            assert btn.callback_data is not None
+            assert len(btn.callback_data.encode("utf-8")) <= 64
