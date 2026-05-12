@@ -51,7 +51,7 @@ _RUN_CB_PREFIX = "report:run:"
 _PERIOD_PNG_CB_PREFIX = "period:png:"  # PNG for a single (year, month)
 _PERIOD_FC_CB_PREFIX = "period:fc:"  # forecast for a single (year, month)
 
-_MENU_WINDOWS: tuple[int, ...] = (3, 6, 12, 24)
+_MENU_WINDOWS: tuple[int, ...] = (1, 3, 6, 12, 24)
 
 
 def parse_months_arg(raw: str | None) -> int | None:

@@ -71,7 +71,7 @@ async def test_bulk_fill_creates_only_weekday_entries(
     assert len(days) == 21
     for d, hours in days:
         assert d.weekday() < 5
-        assert hours == Decimal("8")
+        assert hours == Decimal("10")
 
 
 @pytest.mark.asyncio

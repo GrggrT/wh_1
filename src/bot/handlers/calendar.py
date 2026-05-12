@@ -73,8 +73,8 @@ _PER = _NS + "per:"
 _FW = _NS + "fw:"
 _NOOP = _NS + "noop"
 
-# Bulk-fill default: a regular workday is 8 hours.
-_WORKWEEK_DEFAULT_HOURS = Decimal("8")
+# Bulk-fill default: a regular workday is 10 hours (typical site shift).
+_WORKWEEK_DEFAULT_HOURS = Decimal("10")
 
 _RU_MONTHS: tuple[str, ...] = (
     "Январь", "Февраль", "Март", "Апрель", "Май", "Июнь",

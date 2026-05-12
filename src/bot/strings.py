@@ -564,6 +564,7 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
         "report_btn_pdf": "📄 PDF",
         "report_btn_png": "📈 PNG",
         "report_menu_prompt": "📊 За какой период?",
+        "report_menu_1m": "1 мес",
         "report_menu_3m": "3 мес",
         "report_menu_6m": "6 мес",
         "report_menu_12m": "12 мес",
