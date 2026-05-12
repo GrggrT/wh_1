@@ -695,6 +695,15 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
             "Ставка не задана — рассчитать заработок не могу. "
             "Установи в /profile."
         ),
+        "range_picker_prompt": (
+            "🧮 Выбери период или пришли /range YYYY-MM-DD YYYY-MM-DD"
+        ),
+        "range_btn_this_week": "📅 Эта неделя",
+        "range_btn_last_week": "📅 Прошлая неделя",
+        "range_btn_this_month": "📅 Этот месяц",
+        "range_btn_last_month": "📅 Прошлый месяц",
+        "range_btn_7d": "📅 7 дней",
+        "range_btn_30d": "📅 30 дней",
         # Phase 6.9 — /profile editor
         "profile_header": (
             "⚙ Профиль\n"

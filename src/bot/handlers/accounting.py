@@ -16,8 +16,9 @@ conflated:
 
 from __future__ import annotations
 
+import calendar
 import contextlib
-from datetime import datetime
+from datetime import date, datetime, timedelta
 from decimal import Decimal
 from zoneinfo import ZoneInfo
 
@@ -510,6 +511,55 @@ def format_range_sum(rs: RangeSum, currency: str) -> str:
     return "\n".join(lines)
 
 
+_RANGE_PRESETS: tuple[tuple[str, str], ...] = (
+    ("tw", "range_btn_this_week"),
+    ("lw", "range_btn_last_week"),
+    ("tm", "range_btn_this_month"),
+    ("lm", "range_btn_last_month"),
+    ("d7", "range_btn_7d"),
+    ("d30", "range_btn_30d"),
+)
+
+
+def _range_preset_dates(key: str, today: date) -> tuple[date, date] | None:
+    if key == "tw":
+        start = today - timedelta(days=today.weekday())
+        return start, start + timedelta(days=6)
+    if key == "lw":
+        end_this = today - timedelta(days=today.weekday() + 1)
+        start = end_this - timedelta(days=6)
+        return start, end_this
+    if key == "tm":
+        last = calendar.monthrange(today.year, today.month)[1]
+        return date(today.year, today.month, 1), date(
+            today.year, today.month, last,
+        )
+    if key == "lm":
+        first_this = date(today.year, today.month, 1)
+        end = first_this - timedelta(days=1)
+        return date(end.year, end.month, 1), end
+    if key == "d7":
+        return today - timedelta(days=6), today
+    if key == "d30":
+        return today - timedelta(days=29), today
+    return None
+
+
+def _range_picker_kb() -> InlineKeyboardMarkup:
+    rows: list[list[InlineKeyboardButton]] = []
+    row: list[InlineKeyboardButton] = []
+    for key, label_key in _RANGE_PRESETS:
+        row.append(InlineKeyboardButton(
+            text=t(label_key), callback_data=f"range:preset:{key}",
+        ))
+        if len(row) == 2:
+            rows.append(row)
+            row = []
+    if row:
+        rows.append(row)
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
+
 @router.message(Command("range"))
 async def cmd_range(
     message: Message, command: CommandObject, db_user: User | None = None,
@@ -519,6 +569,11 @@ async def cmd_range(
         return
     raw = (command.args or "").strip()
     parts = raw.split()
+    if not parts:
+        await message.answer(
+            t("range_picker_prompt"), reply_markup=_range_picker_kb(),
+        )
+        return
     if len(parts) != 2:
         await message.answer(t("range_usage"))
         return
@@ -534,3 +589,28 @@ async def cmd_range(
             session, user=db_user, start=start, end=end,
         )
     await message.answer(format_range_sum(rs, db_user.currency))
+
+
+@router.callback_query(F.data.startswith("range:preset:"))
+async def cb_range_preset(
+    callback: CallbackQuery, db_user: User | None = None,
+) -> None:
+    if db_user is None or callback.data is None:
+        await callback.answer()
+        return
+    key = callback.data.split(":", 2)[2]
+    tz = ZoneInfo(get_settings().timezone)
+    today = datetime.now(tz=tz).date()
+    rng = _range_preset_dates(key, today)
+    if rng is None or not isinstance(callback.message, Message):
+        await callback.answer()
+        return
+    start, end = rng
+    async for session in get_session():
+        rs = await compute_range_sum(
+            session, user=db_user, start=start, end=end,
+        )
+    with contextlib.suppress(Exception):
+        await callback.message.edit_reply_markup(reply_markup=None)
+    await callback.message.answer(format_range_sum(rs, db_user.currency))
+    await callback.answer()
