@@ -76,6 +76,30 @@ def test_disabled_admin_returns_503(
     assert resp.status_code == 503
 
 
+def test_admin_restore_requires_auth(
+    client_with_password: TestClient,
+) -> None:
+    resp = client_with_password.post(
+        "/admin/restore",
+        data={"tg_id": "123"},
+        files={"file": ("x.xlsx", b"\x00", "application/octet-stream")},
+    )
+    assert resp.status_code == 401
+
+
+def test_admin_restore_rejects_garbage_upload(
+    client_with_password: TestClient,
+) -> None:
+    resp = client_with_password.post(
+        "/admin/restore",
+        headers=_basic("owner", "secret"),
+        data={"tg_id": "123"},
+        files={"file": ("x.xlsx", b"not a workbook", "application/octet-stream")},
+    )
+    assert resp.status_code == 400
+    assert resp.json()["detail"].startswith("bad_backup")
+
+
 def test_webhook_route_absent_when_not_configured(
     client_with_password: TestClient,
 ) -> None:

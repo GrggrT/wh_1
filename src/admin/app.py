@@ -1,16 +1,18 @@
 """FastAPI admin panel app factory."""
 
 import secrets as _secrets
+import zipfile
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
+from io import BytesIO
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
 import structlog
 from aiogram import Bot, Dispatcher
 from aiogram.types import Update
-from fastapi import Depends, FastAPI, HTTPException, Request, status
-from fastapi.responses import HTMLResponse, Response
+from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile, status
+from fastapi.responses import HTMLResponse, JSONResponse, Response
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import desc, func, select
 
@@ -30,6 +32,11 @@ from src.services.app_settings import TOGGLE_KEYS
 from src.services.app_settings import get_settings as get_app_settings
 from src.services.breaks import get_breaks_for_shifts, total_break_hours
 from src.services.reports import compute_hours
+from src.services.reports.restore import (
+    BackupParseError,
+    apply_restore,
+    parse_backup_xlsx,
+)
 
 logger = structlog.get_logger()
 
@@ -498,6 +505,67 @@ def create_app(
                 "actor": actor or "",
             },
         )
+
+    @app.post("/admin/restore")
+    async def admin_restore(
+        tg_id: int = Form(...),
+        file: UploadFile = File(...),
+        _user: str = Depends(require_admin),
+    ) -> JSONResponse:
+        """Restore a backup XLSX into the user identified by ``tg_id``.
+
+        Same dedup semantics as the bot-side /restore. Returns inserted
+        and skipped counts per sheet.
+        """
+        raw = await file.read()
+        if len(raw) > 5 * 1024 * 1024:
+            raise HTTPException(
+                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                detail="file_too_large",
+            )
+        try:
+            plan = parse_backup_xlsx(BytesIO(raw))
+        except (BackupParseError, zipfile.BadZipFile, KeyError) as exc:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"bad_backup: {exc}",
+            ) from exc
+
+        async for session in get_session():
+            target = (
+                await session.execute(
+                    select(User).where(User.tg_id == tg_id),
+                )
+            ).scalar_one_or_none()
+            if target is None:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="user_not_found",
+                )
+            result = await apply_restore(session, user=target, plan=plan)
+            await session.commit()
+
+        logger.info(
+            "admin_restore_applied",
+            tg_id=tg_id,
+            user_id=target.id,
+            days_inserted=result.days_inserted,
+            days_skipped=result.days_skipped,
+            advances_inserted=result.advances_inserted,
+            advances_skipped=result.advances_skipped,
+            payments_inserted=result.payments_inserted,
+            payments_skipped=result.payments_skipped,
+        )
+        return JSONResponse({
+            "tg_id": tg_id,
+            "user_id": target.id,
+            "days_inserted": result.days_inserted,
+            "days_skipped": result.days_skipped,
+            "advances_inserted": result.advances_inserted,
+            "advances_skipped": result.advances_skipped,
+            "payments_inserted": result.payments_inserted,
+            "payments_skipped": result.payments_skipped,
+        })
 
     @app.get("/healthz")
     async def healthz() -> dict[str, str]:
