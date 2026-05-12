@@ -58,6 +58,11 @@ _RU_MONTHS_SCH: tuple[str, ...] = (
 )
 
 
+def _now_local(tz: ZoneInfo) -> datetime:
+    """Indirection so tests can freeze time without touching datetime globally."""
+    return datetime.now(tz=tz)
+
+
 async def _process_once(bot: Bot, settings: Settings) -> None:
     async for session in get_session():
         # Stale break auto-close (notify the affected user)
@@ -244,7 +249,7 @@ async def _maybe_send_gap_nudges(bot: Bot, settings: Settings) -> None:
     logged hours in 3+ business days. Skips users already nudged today.
     """
     tz = ZoneInfo(settings.timezone)
-    now_local = datetime.now(tz=tz)
+    now_local = _now_local(tz)
     today = now_local.date()
     if now_local.hour < settings.daily_digest_hour:
         return
@@ -276,7 +281,7 @@ async def _maybe_send_debt_pings(bot: Bot, settings: Settings) -> None:
     ISO week per user.
     """
     tz = ZoneInfo(settings.timezone)
-    now_local = datetime.now(tz=tz)
+    now_local = _now_local(tz)
     if now_local.weekday() != 0:  # Monday only
         return
     if now_local.hour < settings.daily_digest_hour:
