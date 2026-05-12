@@ -9,6 +9,7 @@ from zoneinfo import ZoneInfo
 
 import pytest
 import pytest_asyncio
+from openpyxl import Workbook
 from sqlalchemy import BigInteger
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
@@ -22,6 +23,7 @@ from src.services import accounting as accounting_module
 from src.services.advances import SalaryBreakdown, record_advance
 from src.services.reports.service import get_report_data
 from src.services.reports.text import format_report_text
+from src.services.reports.xlsx import build_report_xlsx, xlsx_filename
 from src.services.salary_payments import record_payment
 
 
@@ -237,3 +239,103 @@ async def test_format_report_text_renders_unpriced_row(
     )
     text = format_report_text(data, user)
     assert "без ставки" in text
+
+
+# --- build_report_xlsx -------------------------------------------------
+
+
+def _load_workbook(buf: bytes) -> Workbook:
+    from io import BytesIO
+
+    from openpyxl import load_workbook
+
+    return load_workbook(BytesIO(buf), data_only=True)
+
+
+def test_xlsx_filename_includes_window() -> None:
+    assert xlsx_filename(6) == "report_6m.xlsx"
+    assert xlsx_filename(12) == "report_12m.xlsx"
+
+
+async def test_build_report_xlsx_has_header_period_and_totals(
+    session: AsyncSession, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    user = await _seed_user(session)
+    _stub_compute_salary(monkeypatch, by_month={
+        (2026, 5): (Decimal("160"), Decimal("8000")),
+        (2026, 4): (Decimal("160"), Decimal("8000")),
+    })
+    await record_payment(
+        session, user_id=user.id, paid_on=date(2026, 5, 5),
+        period_year=2026, period_month=4, amount=Decimal("8000"),
+        recorded_by_id=user.id,
+    )
+    await session.commit()
+    data = await get_report_data(
+        session, user=user, tz=_TZ, today=date(2026, 5, 20), months=2,
+    )
+    buf = build_report_xlsx(data, user)
+    wb = _load_workbook(buf.getvalue())
+    ws = wb["Отчёт"]
+    # Title on row 1.
+    assert "2 мес" in str(ws.cell(row=1, column=1).value)
+    # Column headers on row 3 include the currency code.
+    headers = [ws.cell(row=3, column=c).value for c in range(1, 7)]
+    assert headers[0] == "Период"
+    assert "PLN" in str(headers[2])  # Начислено (PLN)
+    # First data row is the newest month (May 2026).
+    assert ws.cell(row=4, column=1).value == "Май 2026"
+    assert ws.cell(row=4, column=2).value == 160.0
+    assert ws.cell(row=4, column=3).value == 8000.0
+    # Second data row is April 2026 (paid in full → settled).
+    assert ws.cell(row=5, column=1).value == "Апрель 2026"
+    assert "закрыт" in str(ws.cell(row=5, column=6).value)
+    # Totals row sits one blank line below the data block (row 7).
+    assert ws.cell(row=7, column=1).value == "Итого"
+    assert ws.cell(row=7, column=2).value == 320.0
+    assert ws.cell(row=7, column=4).value == 8000.0
+    assert ws.cell(row=7, column=5).value == 8000.0  # outstanding debt
+
+
+async def test_build_report_xlsx_renders_unpriced_dash(
+    session: AsyncSession, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    user = await _seed_user(session, rate=None)
+    _stub_compute_salary(monkeypatch, by_month={
+        (2026, 5): (Decimal("100"), None),
+    })
+    data = await get_report_data(
+        session, user=user, tz=_TZ, today=date(2026, 5, 20), months=1,
+    )
+    buf = build_report_xlsx(data, user)
+    wb = _load_workbook(buf.getvalue())
+    ws = wb["Отчёт"]
+    # Earnings + remaining cells fall back to em dash for unpriced rows.
+    assert ws.cell(row=4, column=3).value == "—"
+    assert ws.cell(row=4, column=5).value == "—"
+    assert "без ставки" in str(ws.cell(row=4, column=6).value)
+
+
+async def test_build_report_xlsx_shows_overpaid_row(
+    session: AsyncSession, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    user = await _seed_user(session)
+    _stub_compute_salary(monkeypatch, by_month={
+        (2026, 5): (Decimal("160"), Decimal("8000")),
+    })
+    await record_payment(
+        session, user_id=user.id, paid_on=date(2026, 5, 5),
+        period_year=2026, period_month=5, amount=Decimal("9000"),
+        recorded_by_id=user.id,
+    )
+    await session.commit()
+    data = await get_report_data(
+        session, user=user, tz=_TZ, today=date(2026, 5, 20), months=1,
+    )
+    buf = build_report_xlsx(data, user)
+    wb = _load_workbook(buf.getvalue())
+    ws = wb["Отчёт"]
+    # Totals row 6 (one data row), overpaid row directly below.
+    assert ws.cell(row=6, column=1).value == "Итого"
+    assert ws.cell(row=7, column=1).value == "Переплата"
+    assert ws.cell(row=7, column=5).value == 1000.0
