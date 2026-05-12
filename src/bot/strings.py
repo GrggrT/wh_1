@@ -615,6 +615,11 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
             "Действует до {expires}.\n"
             "На новом аккаунте: /restore_from <код>."
         ),
+        "share_backup_failed": (
+            "Не получилось выдать код: {reason}. "
+            "Если активных слишком много — подожди, пока истекут, "
+            "или попроси владельца поднять лимит."
+        ),
         "restore_from_usage": (
             "Используй: /restore_from <код>\n"
             "Код выдаёт /share_backup на старом аккаунте."

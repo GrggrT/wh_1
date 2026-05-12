@@ -12,7 +12,7 @@ rows (matching natural keys) are skipped, never overwritten.
 from __future__ import annotations
 
 import contextlib
-from datetime import datetime
+from datetime import datetime, timedelta
 from io import BytesIO
 from zoneinfo import ZoneInfo
 
@@ -292,8 +292,17 @@ async def cmd_share_backup(
     """Mint a one-shot token a different Telegram account can redeem."""
     if db_user is None:
         return
+    settings = get_settings()
     async for session in get_session():
-        issued = await issue_share_token(session, source_user=db_user)
+        try:
+            issued = await issue_share_token(
+                session, source_user=db_user,
+                max_active=settings.share_backup_max_active,
+            )
+        except ShareTokenError as exc:
+            await session.rollback()
+            await message.answer(t("share_backup_failed", reason=str(exc)))
+            return
         await session.commit()
     logger.info(
         "share_backup_issued",
@@ -352,6 +361,7 @@ async def cmd_backup_to_cloud(
         try:
             issued = await register_cloud_backup(
                 session, owner=db_user, data=data, settings=settings,
+                ttl=timedelta(days=settings.cloud_backup_ttl_days),
             )
         except CloudBackupError as exc:
             await session.rollback()

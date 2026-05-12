@@ -155,3 +155,32 @@ async def test_peek_invalid_token_raises(session: AsyncSession) -> None:
     dst = await _add_user(session, tg_id=2, name="Dst")
     with pytest.raises(ShareTokenError, match="not_found"):
         await peek_share_token(session, token="garbage", redeemer=dst)
+
+
+async def test_issue_rate_limit_caps_active_tokens(
+    session: AsyncSession,
+) -> None:
+    u = await _add_user(session, tg_id=1, name="A")
+    for _ in range(3):
+        await issue_share_token(session, source_user=u, max_active=3)
+    with pytest.raises(ShareTokenError, match="rate_limited"):
+        await issue_share_token(session, source_user=u, max_active=3)
+
+
+async def test_issue_rate_limit_ignores_expired_and_redeemed(
+    session: AsyncSession,
+) -> None:
+    src = await _add_user(session, tg_id=1, name="Src")
+    dst = await _add_user(session, tg_id=2, name="Dst")
+    # One expired token + one redeemed token shouldn't count toward the cap.
+    past = datetime.now(tz=UTC) - timedelta(days=2)
+    await issue_share_token(
+        session, source_user=src, ttl=timedelta(hours=-1), now=past,
+    )
+    issued = await issue_share_token(session, source_user=src)
+    await redeem_share_token(session, token=issued.token, redeemer=dst)
+    # With cap=2, we should still be able to issue one fresh token.
+    fresh = await issue_share_token(
+        session, source_user=src, max_active=2,
+    )
+    assert fresh.token

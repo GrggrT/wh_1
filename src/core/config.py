@@ -24,6 +24,10 @@ class Settings(BaseSettings):
     supabase_storage_bucket: str = "shift-photos"
     # Separate bucket for /backup_to_cloud XLSX snapshots.
     supabase_backups_bucket: str = "backups"
+    # TTL for cloud-stashed backups before the hourly cleaner reaps them.
+    cloud_backup_ttl_days: int = 7
+    # Cap on unredeemed/unexpired share tokens per source user.
+    share_backup_max_active: int = 5
 
     # Daily digest delivered to owner_tg_id
     daily_digest_enabled: bool = True

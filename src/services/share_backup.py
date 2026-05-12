@@ -20,7 +20,7 @@ import secrets
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.models import Advance, DayEntry, SalaryPayment, ShareToken, User
@@ -54,8 +54,23 @@ async def issue_share_token(
     source_user: User,
     ttl: timedelta = DEFAULT_TTL,
     now: datetime | None = None,
+    max_active: int | None = None,
 ) -> IssuedToken:
     moment = now or datetime.now(tz=UTC)
+    if max_active is not None:
+        active = (
+            await session.execute(
+                select(func.count())
+                .select_from(ShareToken)
+                .where(
+                    ShareToken.source_user_id == source_user.id,
+                    ShareToken.redeemed_at.is_(None),
+                    ShareToken.expires_at > moment,
+                ),
+            )
+        ).scalar_one()
+        if active >= max_active:
+            raise ShareTokenError("rate_limited")
     raw = secrets.token_urlsafe(24)
     row = ShareToken(
         token=raw,
