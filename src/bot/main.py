@@ -28,6 +28,9 @@ from src.bot.handlers import (
     system,
 )
 from src.bot.handlers import (
+    calendar as calendar_handler,
+)
+from src.bot.handlers import (
     settings as settings_handler,
 )
 from src.bot.middlewares.features import FeatureGateMiddleware
@@ -116,6 +119,7 @@ _CORE_COMMANDS: list[BotCommand] = [
     BotCommand(command="menu", description="Главное меню"),
     BotCommand(command="h", description="Поставить часы за сегодня: /h 8"),
     BotCommand(command="my_days", description="Мои последние 14 дней"),
+    BotCommand(command="calendar", description="Календарь — редактировать данные по датам"),
     BotCommand(command="edit_day", description="Изменить день: /edit_day YYYY-MM-DD <часы>"),
     BotCommand(command="salary", description="Моя зарплата за месяц"),
     BotCommand(command="my_advances", description="Мои авансы"),
@@ -307,6 +311,7 @@ async def main() -> None:
     dp.include_router(exports.router)
     dp.include_router(day_entries.router)
     dp.include_router(advances.router)
+    dp.include_router(calendar_handler.router)
     dp.include_router(settings_handler.router)
 
     _register_error_handler(dp, bot, settings)

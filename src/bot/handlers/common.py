@@ -7,6 +7,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
 from src.bot.handlers.advances import cmd_my_advances, cmd_salary
+from src.bot.handlers.calendar import cmd_calendar
 from src.bot.handlers.day_entries import cmd_h, cmd_my_days
 from src.bot.handlers.onboarding import start_wizard
 from src.bot.keyboards import simple_menu
@@ -111,3 +112,10 @@ async def btn_salary(message: Message, db_user: User | None = None) -> None:
 @router.message(F.text == t("menu_btn_advances"))
 async def btn_advances(message: Message, db_user: User | None = None) -> None:
     await cmd_my_advances(message, _noargs(), db_user=db_user)
+
+
+@router.message(F.text == t("menu_btn_calendar"))
+async def btn_calendar(
+    message: Message, state: FSMContext, db_user: User | None = None,
+) -> None:
+    await cmd_calendar(message, state, db_user=db_user)

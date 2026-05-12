@@ -495,7 +495,42 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
         "menu_btn_my_days": "📅 Мои дни",
         "menu_btn_salary": "💰 Зарплата",
         "menu_btn_advances": "💵 Авансы",
+        "menu_btn_calendar": "📆 Календарь",
         "menu_hint": "Главное меню. Жми кнопки или /help.",
+        # Phase 6.6 — inline calendar
+        "cal_header": "📆 {month} {year}\nЖми на дату, чтобы открыть.",
+        "cal_legend": "• часы  🌴 выходной  💵 аванс  💰 выплата",
+        "cal_day_header": "📅 {date}",
+        "cal_day_no_entry": "Часы: не указаны",
+        "cal_day_off_line": "🌴 Выходной",
+        "cal_day_hours": "Часы: {hours}",
+        "cal_day_advances": "💵 Авансов: {n} на сумму {total} PLN",
+        "cal_day_payments": "💰 Выплат: {n} на сумму {total} PLN",
+        "cal_day_payment_row": "  · {amount} PLN за период {period}",
+        "cal_btn_set_hours": "🕒 Поставить часы",
+        "cal_btn_dayoff": "🌴 Отметить выходной",
+        "cal_btn_advance": "💵 Записать аванс",
+        "cal_btn_payment": "💰 Записать выплату зарплаты",
+        "cal_btn_back": "◀ К месяцу",
+        "cal_btn_back_to_day": "◀ К дню",
+        "cal_pick_hours": "Выбери часы за {date}:",
+        "cal_advance_prompt": (
+            "Введи сумму аванса за {date} (PLN). "
+            "Например: 200 или 350.50. /cancel — отмена."
+        ),
+        "cal_advance_recorded": "✅ Аванс {amount} PLN за {date} записан.",
+        "cal_pay_pick_period": (
+            "💰 Выплата зарплаты {date}.\n"
+            "За какой период? (зарплата за апрель может быть выплачена в мае)"
+        ),
+        "cal_per_btn": "За {month} {year}",
+        "cal_pay_amount_prompt": (
+            "Введи сумму выплаты за {period} (выплачено {date}, PLN). "
+            "/cancel — отмена."
+        ),
+        "cal_pay_recorded": (
+            "✅ Выплата {amount} PLN зачтена за {period} (выплачено {date})."
+        ),
         # Phase 5.5 — cutover
         "feature_disabled": (
             "Эта функция выключена. Владелец может включить её в /settings."
@@ -506,6 +541,7 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
             "/help — справка\n"
             "/h <часы> — поставить часы за сегодня (например: /h 8)\n"
             "/my_days — мои последние 14 дней\n"
+            "/calendar — календарь: редактировать любую дату\n"
             "/edit_day YYYY-MM-DD <часы> — изменить день\n"
             "/remind_on HH — вечернее напоминание поставить часы\n"
             "/remind_off — отключить напоминание\n"

@@ -22,3 +22,8 @@ class Onboarding(StatesGroup):
     awaiting_name = State()
     awaiting_rate = State()
     awaiting_reminder = State()
+
+
+class CalendarFlow(StatesGroup):
+    awaiting_advance_amount = State()
+    awaiting_payment_amount = State()

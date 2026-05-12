@@ -44,6 +44,9 @@ def simple_menu(
             KeyboardButton(text=t("menu_btn_salary")),
             KeyboardButton(text=t("menu_btn_advances")),
         ],
+        [
+            KeyboardButton(text=t("menu_btn_calendar")),
+        ],
     ]
     if snap.legacy_clock_inout_enabled:
         rows.append(

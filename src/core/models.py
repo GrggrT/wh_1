@@ -211,6 +211,35 @@ class Advance(Base):
     )
 
 
+class SalaryPayment(Base):
+    """Phase 6.6: salary payment ledger entry.
+
+    `paid_on` = the date money was actually given to the worker.
+    `period_year` + `period_month` = the accounting period the payment
+    covers. These intentionally differ in the typical case (salary paid in
+    May for April work), and tracking both separately is what makes the
+    bookkeeping correct.
+    """
+
+    __tablename__ = "salary_payments"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    user_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("users.id", ondelete="CASCADE"), nullable=False,
+    )
+    paid_on: Mapped[date] = mapped_column(Date, nullable=False)
+    period_year: Mapped[int] = mapped_column(Integer, nullable=False)
+    period_month: Mapped[int] = mapped_column(Integer, nullable=False)
+    amount: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
+    note: Mapped[str | None] = mapped_column(Text)
+    recorded_by_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("users.id", ondelete="SET NULL"), nullable=False,
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now(),
+    )
+
+
 class AppSettings(Base):
     """Phase 5.4: single-row global feature toggles.
 
