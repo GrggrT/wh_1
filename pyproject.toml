@@ -52,7 +52,7 @@ strict = true
 plugins = ["sqlalchemy.ext.mypy.plugin"]
 
 [[tool.mypy.overrides]]
-module = ["geoalchemy2.*"]
+module = ["geoalchemy2.*", "reportlab.*"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]

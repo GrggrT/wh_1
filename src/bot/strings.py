@@ -881,7 +881,7 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
 }
 
 
-def t(key: str, locale: str = "ru", **kwargs: object) -> str:
+def t(key: str, /, locale: str = "ru", **kwargs: object) -> str:
     template = STRINGS.get(locale, STRINGS["ru"]).get(key, key)
     if kwargs:
         return template.format(**kwargs)

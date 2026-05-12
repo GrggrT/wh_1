@@ -172,14 +172,15 @@ async def apply_restore(
         )).scalars().all(),
     )
     days_inserted = days_skipped = 0
-    for row in plan.days:
-        if row.day in existing_days:
+    for day_row in plan.days:
+        if day_row.day in existing_days:
             days_skipped += 1
             continue
         session.add(DayEntry(
-            user_id=user.id, day=row.day, hours=row.hours, note=row.note,
+            user_id=user.id, day=day_row.day,
+            hours=day_row.hours, note=day_row.note,
         ))
-        existing_days.add(row.day)
+        existing_days.add(day_row.day)
         days_inserted += 1
 
     existing_advances: set[tuple[date, int, int, Decimal, str | None]] = {
@@ -189,18 +190,21 @@ async def apply_restore(
         )).scalars().all()
     }
     advances_inserted = advances_skipped = 0
-    for row in plan.advances:
-        key = (row.day, row.period_year, row.period_month, row.amount, row.note)
-        if key in existing_advances:
+    for adv_row in plan.advances:
+        adv_key = (
+            adv_row.day, adv_row.period_year, adv_row.period_month,
+            adv_row.amount, adv_row.note,
+        )
+        if adv_key in existing_advances:
             advances_skipped += 1
             continue
         session.add(Advance(
-            user_id=user.id, day=row.day,
-            period_year=row.period_year, period_month=row.period_month,
-            amount=row.amount, note=row.note,
+            user_id=user.id, day=adv_row.day,
+            period_year=adv_row.period_year, period_month=adv_row.period_month,
+            amount=adv_row.amount, note=adv_row.note,
             recorded_by_id=user.id,
         ))
-        existing_advances.add(key)
+        existing_advances.add(adv_key)
         advances_inserted += 1
 
     existing_payments: set[tuple[date, int, int, Decimal, str | None]] = {
@@ -210,20 +214,21 @@ async def apply_restore(
         )).scalars().all()
     }
     payments_inserted = payments_skipped = 0
-    for row in plan.payments:
-        key = (
-            row.paid_on, row.period_year, row.period_month, row.amount, row.note,
+    for pay_row in plan.payments:
+        pay_key = (
+            pay_row.paid_on, pay_row.period_year, pay_row.period_month,
+            pay_row.amount, pay_row.note,
         )
-        if key in existing_payments:
+        if pay_key in existing_payments:
             payments_skipped += 1
             continue
         session.add(SalaryPayment(
-            user_id=user.id, paid_on=row.paid_on,
-            period_year=row.period_year, period_month=row.period_month,
-            amount=row.amount, note=row.note,
+            user_id=user.id, paid_on=pay_row.paid_on,
+            period_year=pay_row.period_year, period_month=pay_row.period_month,
+            amount=pay_row.amount, note=pay_row.note,
             recorded_by_id=user.id,
         ))
-        existing_payments.add(key)
+        existing_payments.add(pay_key)
         payments_inserted += 1
 
     return RestoreResult(

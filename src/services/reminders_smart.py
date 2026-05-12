@@ -69,7 +69,7 @@ async def users_with_gap(
     ).group_by(DayEntry.user_id)
     rows = (await session.execute(stmt)).all()
     last_day_by_user: dict[int, date] = {
-        int(uid): last for uid, last in rows  # type: ignore[misc]
+        int(uid): last for uid, last in rows
     }
 
     users = (await session.execute(select(User))).scalars().all()

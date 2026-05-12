@@ -10,7 +10,9 @@ file.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from datetime import datetime
+from io import BytesIO
 from zoneinfo import ZoneInfo
 
 import structlog
@@ -32,7 +34,7 @@ from src.core.models import User
 from src.services.reports.archive import archive_filename, build_report_archive
 from src.services.reports.pdf import build_report_pdf, pdf_filename
 from src.services.reports.png import build_report_png, png_filename
-from src.services.reports.service import get_report_data
+from src.services.reports.service import ReportData, get_report_data
 from src.services.reports.text import format_report_text
 from src.services.reports.xlsx import build_report_xlsx, xlsx_filename
 
@@ -159,7 +161,8 @@ async def cmd_report(
 
 async def _send_report_file(
     callback: CallbackQuery, db_user: User, prefix: str,
-    builder, filename_fn,  # noqa: ANN001
+    builder: Callable[[ReportData, User], BytesIO],
+    filename_fn: Callable[[int], str],
 ) -> None:
     if callback.data is None or callback.message is None:
         await callback.answer()

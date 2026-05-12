@@ -531,6 +531,8 @@ def create_app(
                 detail=f"bad_backup: {exc}",
             ) from exc
 
+        target: User | None = None
+        result = None
         async for session in get_session():
             target = (
                 await session.execute(
@@ -544,6 +546,7 @@ def create_app(
                 )
             result = await apply_restore(session, user=target, plan=plan)
             await session.commit()
+        assert target is not None and result is not None  # noqa: S101
 
         logger.info(
             "admin_restore_applied",

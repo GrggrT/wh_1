@@ -15,6 +15,7 @@ from io import BytesIO
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Font
 from openpyxl.utils import get_column_letter
+from openpyxl.worksheet.worksheet import Worksheet
 
 from src.core.models import Advance, DayEntry, SalaryPayment, User
 
@@ -26,7 +27,7 @@ def _money(value: Decimal | None) -> float | None:
     return None if value is None else float(value)
 
 
-def _write_header(ws, headers: tuple[str, ...]) -> None:  # noqa: ANN001
+def _write_header(ws: Worksheet, headers: tuple[str, ...]) -> None:
     bold = Font(bold=True)
     centre = Alignment(horizontal="center")
     for col, label in enumerate(headers, 1):
@@ -35,14 +36,14 @@ def _write_header(ws, headers: tuple[str, ...]) -> None:  # noqa: ANN001
         cell.alignment = centre
 
 
-def _set_widths(ws, widths: tuple[int, ...]) -> None:  # noqa: ANN001
+def _set_widths(ws: Worksheet, widths: tuple[int, ...]) -> None:
     for col, width in enumerate(widths, 1):
         ws.column_dimensions[get_column_letter(col)].width = width
 
 
-def _fill_profile(ws, user: User, today: date) -> None:  # noqa: ANN001
+def _fill_profile(ws: Worksheet, user: User, today: date) -> None:
     bold = Font(bold=True)
-    rows: list[tuple[str, object]] = [
+    rows: list[tuple[str, int | str | float | None]] = [
         ("user_id", user.id),
         ("tg_id", user.tg_id),
         ("name", user.name),
@@ -57,7 +58,7 @@ def _fill_profile(ws, user: User, today: date) -> None:  # noqa: ANN001
     _set_widths(ws, (18, 24))
 
 
-def _fill_day_entries(ws, entries: list[DayEntry]) -> None:  # noqa: ANN001
+def _fill_day_entries(ws: Worksheet, entries: list[DayEntry]) -> None:
     _write_header(ws, ("id", "day", "hours", "site_id", "note", "created_at"))
     for row_idx, e in enumerate(entries, 2):
         ws.cell(row=row_idx, column=1, value=e.id)
@@ -74,7 +75,7 @@ def _fill_day_entries(ws, entries: list[DayEntry]) -> None:  # noqa: ANN001
     _set_widths(ws, (8, 12, 10, 10, 40, 26))
 
 
-def _fill_advances(ws, advances: list[Advance]) -> None:  # noqa: ANN001
+def _fill_advances(ws: Worksheet, advances: list[Advance]) -> None:
     _write_header(
         ws,
         ("id", "day", "period_year", "period_month", "amount", "note", "created_at"),
@@ -95,7 +96,7 @@ def _fill_advances(ws, advances: list[Advance]) -> None:  # noqa: ANN001
     _set_widths(ws, (8, 12, 12, 12, 12, 40, 26))
 
 
-def _fill_payments(ws, payments: list[SalaryPayment]) -> None:  # noqa: ANN001
+def _fill_payments(ws: Worksheet, payments: list[SalaryPayment]) -> None:
     _write_header(
         ws,
         (
