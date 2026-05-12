@@ -10,6 +10,7 @@ from src.bot.handlers.accounting import cmd_cash, cmd_period
 from src.bot.handlers.calendar import cmd_calendar
 from src.bot.handlers.day_entries import cmd_h, cmd_my_days
 from src.bot.handlers.onboarding import start_wizard
+from src.bot.handlers.profile import cmd_profile
 from src.bot.keyboards import simple_menu
 from src.bot.strings import t
 from src.core.db import get_session
@@ -119,3 +120,10 @@ async def btn_calendar(
     message: Message, state: FSMContext, db_user: User | None = None,
 ) -> None:
     await cmd_calendar(message, state, db_user=db_user)
+
+
+@router.message(F.text == t("menu_btn_profile"))
+async def btn_profile(
+    message: Message, state: FSMContext, db_user: User | None = None,
+) -> None:
+    await cmd_profile(message, state, db_user=db_user)

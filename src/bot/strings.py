@@ -496,6 +496,7 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
         "menu_btn_period": "📊 Период",
         "menu_btn_cash": "💸 Касса",
         "menu_btn_my_days": "📅 Мои дни",
+        "menu_btn_profile": "⚙ Профиль",
         "menu_hint": "Главное меню. Жми кнопки или /help.",
         # Phase 6.6 — inline calendar
         "cal_header": "📆 {month} {year}\nЖми на дату, чтобы открыть.",
