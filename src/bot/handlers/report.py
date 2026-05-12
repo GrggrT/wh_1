@@ -156,6 +156,7 @@ async def cmd_report(
     await message.answer(
         format_report_text(data, db_user),
         reply_markup=_download_keyboard(months),
+        parse_mode="HTML",
     )
 
 
@@ -350,5 +351,6 @@ async def cb_report_run(
     await callback.message.answer(
         format_report_text(data, db_user),
         reply_markup=_download_keyboard(months),
+        parse_mode="HTML",
     )
     await callback.answer()

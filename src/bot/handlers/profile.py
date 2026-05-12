@@ -10,6 +10,7 @@ from __future__ import annotations
 import contextlib
 import re
 from decimal import Decimal
+from html import escape as _esc
 
 from aiogram import F, Router
 from aiogram.filters import Command
@@ -128,11 +129,11 @@ def _render_profile(user: User) -> str:
     tz_value = user.timezone if user.timezone else t("profile_timezone_default")
     return t(
         "profile_header",
-        name=user.name,
+        name=_esc(user.name),
         rate=rate,
         currency=user.currency,
         reminder=reminder,
-        timezone=tz_value,
+        timezone=_esc(tz_value),
     )
 
 
@@ -149,7 +150,11 @@ async def cmd_profile(
     if db_user is None:
         return
     await state.clear()
-    await message.answer(_render_profile(db_user), reply_markup=_profile_keyboard())
+    await message.answer(
+        _render_profile(db_user),
+        reply_markup=_profile_keyboard(),
+        parse_mode="HTML",
+    )
 
 
 @router.callback_query(F.data == _CB_CLOSE)
@@ -193,7 +198,7 @@ async def msg_name(
         rendered = _render_profile(user)
     await state.clear()
     await message.answer(t("profile_name_saved", name=name))
-    await message.answer(rendered, reply_markup=_profile_keyboard())
+    await message.answer(rendered, reply_markup=_profile_keyboard(), parse_mode="HTML")
 
 
 # --- Hourly rate ---------------------------------------------------------
@@ -242,7 +247,7 @@ async def msg_rate(
         await message.answer(t("profile_rate_cleared"))
     else:
         await message.answer(t("profile_rate_saved", rate=str(rate), currency=cur))
-    await message.answer(rendered, reply_markup=_profile_keyboard())
+    await message.answer(rendered, reply_markup=_profile_keyboard(), parse_mode="HTML")
 
 
 # --- Currency ------------------------------------------------------------
@@ -276,7 +281,7 @@ async def msg_currency(
         rendered = _render_profile(user)
     await state.clear()
     await message.answer(t("profile_currency_saved", currency=raw))
-    await message.answer(rendered, reply_markup=_profile_keyboard())
+    await message.answer(rendered, reply_markup=_profile_keyboard(), parse_mode="HTML")
 
 
 # --- Reminder ------------------------------------------------------------
@@ -326,7 +331,9 @@ async def cb_reminder_set(
     value = t("profile_reminder_none") if hour is None else f"{hour:02d}:00"
     if isinstance(query.message, Message):
         await query.message.answer(t("profile_reminder_saved", value=value))
-        await query.message.answer(rendered, reply_markup=_profile_keyboard())
+        await query.message.answer(
+            rendered, reply_markup=_profile_keyboard(), parse_mode="HTML",
+        )
     await query.answer()
 
 
@@ -377,7 +384,9 @@ async def cb_timezone_default(
     await state.clear()
     if isinstance(query.message, Message):
         await query.message.answer(t("profile_timezone_cleared"))
-        await query.message.answer(rendered, reply_markup=_profile_keyboard())
+        await query.message.answer(
+            rendered, reply_markup=_profile_keyboard(), parse_mode="HTML",
+        )
     await query.answer()
 
 
@@ -404,7 +413,9 @@ async def cb_timezone_set(
     await state.clear()
     if isinstance(query.message, Message):
         await query.message.answer(t("profile_timezone_saved", tz=tz_name))
-        await query.message.answer(rendered, reply_markup=_profile_keyboard())
+        await query.message.answer(
+            rendered, reply_markup=_profile_keyboard(), parse_mode="HTML",
+        )
     await query.answer()
 
 
@@ -428,7 +439,7 @@ async def msg_timezone(
         rendered = _render_profile(user)
     await state.clear()
     await message.answer(t("profile_timezone_saved", tz=raw))
-    await message.answer(rendered, reply_markup=_profile_keyboard())
+    await message.answer(rendered, reply_markup=_profile_keyboard(), parse_mode="HTML")
 
 
 @router.message(ProfileEdit(), Command("cancel"))

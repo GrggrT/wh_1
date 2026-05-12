@@ -245,7 +245,7 @@ async def test_format_report_text_contains_period_labels_and_totals(
     assert "Апрель 2026" in text
     assert "PLN" in text
     # Totals row mentions debt (долг) including the May 8000 PLN.
-    assert "долг 8000.00" in text
+    assert "долг <b>8000.00" in text
 
 
 async def test_format_report_text_renders_unpriced_row(

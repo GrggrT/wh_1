@@ -509,12 +509,12 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
         "menu_btn_profile": "⚙ Профиль",
         "menu_hint": "Главное меню. Жми кнопки или /help.",
         # Phase 6.6 — inline calendar
-        "cal_header": "📆 {month} {year}\nЖми на дату, чтобы открыть.",
+        "cal_header": "<b>📆 {month} {year}</b>\nЖми на дату, чтобы открыть.",
         "cal_legend": "• часы  🌴 выходной  💵 аванс  💰 выплата",
         "cal_btn_fill_workweek": "💼 Заполнить будни (10 ч)",
         "cal_fill_result": "Добавлено будних дней: {n} × 10 ч.",
         "cal_fill_none": "Будни уже отмечены.",
-        "cal_day_header": "📅 {date}",
+        "cal_day_header": "<b>📅 {date}</b>",
         "cal_day_no_entry": "Часы: не указаны",
         "cal_day_off_line": "🌴 Выходной",
         "cal_day_hours": "Часы: {hours}",
@@ -553,22 +553,22 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
             "✅ Выплата {amount} {currency} зачтена за {period} (выплачено {date})."
         ),
         # Phase 6.11a — multi-month /report
-        "report_header": "📊 Отчёт за последние {months} мес.",
+        "report_header": "<b>📊 Отчёт за последние {months} мес.</b>",
         "report_row": (
-            "{period}: {hours} ч · начислено {earned} {currency} · "
-            "получено {received} {currency} · остаток {remaining} {currency} {tag}"
+            "<b>{period}</b>: {hours} ч · начислено <b>{earned} {currency}</b> · "
+            "получено {received} {currency} · остаток <b>{remaining} {currency}</b> {tag}"
         ),
-        "report_row_unpriced": "{period}: {hours} ч · (без ставки)",
+        "report_row_unpriced": "<b>{period}</b>: {hours} ч · (без ставки)",
         "report_tag_settled": "✅",
         "report_tag_pending": "⏳",
         "report_tag_partial": "🟡",
         "report_tag_overpaid": "🟢+",
         "report_tag_unpriced": "❔",
         "report_totals": (
-            "Итого: {hours} ч · начислено {earned} {currency} · "
-            "получено {received} {currency} · долг {owed} {currency}"
+            "<b>Итого</b>: <b>{hours} ч</b> · начислено <b>{earned} {currency}</b> · "
+            "получено {received} {currency} · долг <b>{owed} {currency}</b>"
         ),
-        "report_total_overpaid": "Переплата (всего): {overpaid} {currency}",
+        "report_total_overpaid": "Переплата (всего): <b>{overpaid} {currency}</b>",
         "report_bad_arg": "Использование: /report [N] — где N от 1 до 24 месяцев.",
         "report_btn_xlsx": "📥 XLSX",
         "report_btn_pdf": "📄 PDF",
@@ -773,12 +773,12 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
         "range_btn_30d": "📅 30 дней",
         # Phase 6.9 — /profile editor
         "profile_header": (
-            "⚙ Профиль\n"
-            "Имя: {name}\n"
-            "Ставка: {rate}\n"
-            "Валюта: {currency}\n"
-            "Напоминание: {reminder}\n"
-            "Часовой пояс: {timezone}"
+            "<b>⚙ Профиль</b>\n"
+            "Имя: <b>{name}</b>\n"
+            "Ставка: <b>{rate}</b>\n"
+            "Валюта: <b>{currency}</b>\n"
+            "Напоминание: <b>{reminder}</b>\n"
+            "Часовой пояс: <b>{timezone}</b>"
         ),
         "profile_rate_none": "не задана",
         "profile_reminder_none": "выключено",

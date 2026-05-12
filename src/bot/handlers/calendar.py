@@ -386,7 +386,11 @@ async def cmd_calendar(
         kb = await _build_month_keyboard(
             session, user_id=db_user.id, year=today.year, month=today.month,
         )
-    await message.answer(_month_header_text(today.year, today.month), reply_markup=kb)
+    await message.answer(
+        _month_header_text(today.year, today.month),
+        reply_markup=kb,
+        parse_mode="HTML",
+    )
 
 
 # --- Callbacks ------------------------------------------------------------
@@ -419,7 +423,9 @@ async def cb_nav(query: CallbackQuery, db_user: User | None = None) -> None:
     if isinstance(query.message, Message):
         with contextlib.suppress(Exception):
             await query.message.edit_text(
-                _month_header_text(year, month), reply_markup=kb,
+                _month_header_text(year, month),
+                reply_markup=kb,
+                parse_mode="HTML",
             )
     await query.answer()
 
@@ -453,7 +459,9 @@ async def cb_fill_workweek(
     if isinstance(query.message, Message):
         with contextlib.suppress(Exception):
             await query.message.edit_text(
-                _month_header_text(year, month), reply_markup=kb,
+                _month_header_text(year, month),
+                reply_markup=kb,
+                parse_mode="HTML",
             )
     note = t("cal_fill_result", n=created) if created else t("cal_fill_none")
     await query.answer(note, show_alert=False)
@@ -475,7 +483,7 @@ async def cb_day(query: CallbackQuery, db_user: User | None = None) -> None:
         )
     if isinstance(query.message, Message):
         with contextlib.suppress(Exception):
-            await query.message.edit_text(body, reply_markup=kb)
+            await query.message.edit_text(body, reply_markup=kb, parse_mode="HTML")
     await query.answer()
 
 
@@ -528,7 +536,7 @@ async def cb_set_hours(
         )
     if isinstance(query.message, Message):
         with contextlib.suppress(Exception):
-            await query.message.edit_text(body, reply_markup=kb)
+            await query.message.edit_text(body, reply_markup=kb, parse_mode="HTML")
     await query.answer(t("settings_saved"))
 
 
@@ -638,7 +646,7 @@ async def msg_advance_amount(
             currency=db_user.currency,
         ),
     )
-    await message.answer(body, reply_markup=kb)
+    await message.answer(body, reply_markup=kb, parse_mode="HTML")
 
 
 # --- Salary payment flow --------------------------------------------------
@@ -746,7 +754,7 @@ async def msg_pay_amount(
             currency=db_user.currency,
         ),
     )
-    await message.answer(body, reply_markup=kb)
+    await message.answer(body, reply_markup=kb, parse_mode="HTML")
 
 
 @router.message(CalendarFlow(), Command("cancel"))
