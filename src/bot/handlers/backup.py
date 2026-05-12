@@ -3,15 +3,23 @@
 Exports profile + day_entries + advances + salary_payments into a single
 workbook. Useful as a personal safety net before product changes or
 account deletion.
+
+Phase 7.1b: ``/restore`` — companion inverse, ingesting a previously
+emitted backup workbook back into the calling user's tables. Duplicate
+rows (matching natural keys) are skipped, never overwritten.
 """
 
 from __future__ import annotations
 
+import contextlib
 from datetime import datetime
+from io import BytesIO
 from zoneinfo import ZoneInfo
 
-from aiogram import Router
+from aiogram import Bot, F, Router
 from aiogram.filters import Command
+from aiogram.fsm.context import FSMContext
+from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import BufferedInputFile, Message
 from sqlalchemy import select
 
@@ -20,8 +28,17 @@ from src.core.config import get_settings
 from src.core.db import get_session
 from src.core.models import Advance, DayEntry, SalaryPayment, User
 from src.services.reports.backup import backup_filename, build_backup_xlsx
+from src.services.reports.restore import (
+    BackupParseError,
+    apply_restore,
+    parse_backup_xlsx,
+)
 
 router = Router()
+
+
+class RestoreFlow(StatesGroup):
+    awaiting_document = State()
 
 
 @router.message(Command("backup"))
@@ -68,3 +85,74 @@ async def cmd_backup(message: Message, db_user: User | None = None) -> None:
             payments=len(pays),
         ),
     )
+
+
+_MAX_BACKUP_BYTES = 5 * 1024 * 1024  # 5 MB is plenty for an accounting XLSX.
+
+
+@router.message(Command("restore"))
+async def cmd_restore(message: Message, state: FSMContext) -> None:
+    await state.set_state(RestoreFlow.awaiting_document)
+    await message.answer(t("restore_prompt"))
+
+
+@router.message(RestoreFlow.awaiting_document, Command("cancel"))
+async def cmd_restore_cancel(message: Message, state: FSMContext) -> None:
+    await state.clear()
+    await message.answer(t("cancelled"))
+
+
+@router.message(RestoreFlow.awaiting_document, F.document)
+async def msg_restore_document(
+    message: Message,
+    state: FSMContext,
+    bot: Bot,
+    db_user: User | None = None,
+) -> None:
+    if db_user is None:
+        return
+    document = message.document
+    if document is None:
+        return
+    name = (document.file_name or "").lower()
+    if not name.endswith(".xlsx"):
+        await message.answer(t("restore_bad_format"))
+        return
+    if document.file_size and document.file_size > _MAX_BACKUP_BYTES:
+        await message.answer(t("restore_too_large"))
+        return
+
+    buf = BytesIO()
+    file = await bot.get_file(document.file_id)
+    if file.file_path is None:
+        await message.answer(t("restore_failed", error="no file path"))
+        return
+    await bot.download_file(file.file_path, destination=buf)
+    buf.seek(0)
+
+    try:
+        plan = parse_backup_xlsx(buf)
+    except BackupParseError as exc:
+        await message.answer(t("restore_failed", error=str(exc)))
+        with contextlib.suppress(Exception):
+            await state.clear()
+        return
+
+    async for session in get_session():
+        result = await apply_restore(session, user=db_user, plan=plan)
+        await session.commit()
+
+    await state.clear()
+    await message.answer(
+        t(
+            "restore_done",
+            days_in=result.days_inserted, days_skip=result.days_skipped,
+            adv_in=result.advances_inserted, adv_skip=result.advances_skipped,
+            pay_in=result.payments_inserted, pay_skip=result.payments_skipped,
+        ),
+    )
+
+
+@router.message(RestoreFlow.awaiting_document)
+async def msg_restore_other(message: Message) -> None:
+    await message.answer(t("restore_need_document"))

@@ -576,6 +576,28 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
         ),
         # Phase 7.8 — /export-archive
         "archive_caption": "📦 Архив отчёта за {months} мес. (XLSX + PDF + PNG)",
+        # Phase 7.1b — /restore
+        "restore_prompt": (
+            "Пришли .xlsx, выгруженный командой /backup. "
+            "Существующие записи не будут изменены — добавятся только новые.\n"
+            "/cancel — отмена."
+        ),
+        "restore_need_document": (
+            "Жду файл .xlsx от /backup. /cancel — отмена."
+        ),
+        "restore_bad_format": (
+            "Это не .xlsx. Пришли резервную копию от команды /backup."
+        ),
+        "restore_too_large": (
+            "Файл слишком большой (лимит 5 МБ). Это точно бэкап от /backup?"
+        ),
+        "restore_failed": "Не получилось прочитать файл: {error}",
+        "restore_done": (
+            "✅ Восстановление завершено.\n"
+            "Дни: добавлено {days_in}, пропущено {days_skip}.\n"
+            "Авансы: добавлено {adv_in}, пропущено {adv_skip}.\n"
+            "Выплаты: добавлено {pay_in}, пропущено {pay_skip}."
+        ),
         # Phase 7.2 — smart reminders
         "gap_nudge_with_last": (
             "👋 Давно не виделись. Последняя запись часов: {last_day}.\n"
@@ -715,6 +737,7 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
             "/report [N] — отчёт за N месяцев (XLSX/PDF/PNG)\n"
             "/export_archive [N] — все три формата отчёта в ZIP\n"
             "/backup — скачать резервную копию (XLSX, все данные)\n"
+            "/restore — загрузить .xlsx-бэкап (только добавит)\n"
             "/my_days — мои последние 14 дней\n"
             "/profile — имя, ставка, валюта, напоминание\n"
             "/my_rate — моя ставка\n"
