@@ -16,6 +16,7 @@ from datetime import datetime
 from io import BytesIO
 from zoneinfo import ZoneInfo
 
+import structlog
 from aiogram import Bot, F, Router
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
@@ -39,6 +40,8 @@ from src.services.reports.restore import (
     apply_restore,
     parse_backup_xlsx,
 )
+
+logger = structlog.get_logger()
 
 router = Router()
 
@@ -222,6 +225,18 @@ async def cb_restore_apply(
     async for session in get_session():
         result = await apply_restore(session, user=db_user, plan=plan)
         await session.commit()
+
+    logger.info(
+        "restore_applied",
+        user_id=db_user.id,
+        tg_id=db_user.tg_id,
+        days_inserted=result.days_inserted,
+        days_skipped=result.days_skipped,
+        advances_inserted=result.advances_inserted,
+        advances_skipped=result.advances_skipped,
+        payments_inserted=result.payments_inserted,
+        payments_skipped=result.payments_skipped,
+    )
 
     await state.clear()
     with contextlib.suppress(Exception):
