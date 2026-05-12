@@ -21,6 +21,7 @@ from src.bot.handlers.report import parse_months_arg
 from src.core.models import Advance, Crew, DayEntry, SalaryPayment, User
 from src.services import accounting as accounting_module
 from src.services.advances import SalaryBreakdown, record_advance
+from src.services.reports.pdf import build_report_pdf, pdf_filename
 from src.services.reports.service import get_report_data
 from src.services.reports.text import format_report_text
 from src.services.reports.xlsx import build_report_xlsx, xlsx_filename
@@ -339,3 +340,50 @@ async def test_build_report_xlsx_shows_overpaid_row(
     assert ws.cell(row=6, column=1).value == "Итого"
     assert ws.cell(row=7, column=1).value == "Переплата"
     assert ws.cell(row=7, column=5).value == 1000.0
+
+
+# --- build_report_pdf --------------------------------------------------
+
+
+def test_pdf_filename_includes_window() -> None:
+    assert pdf_filename(6) == "report_6m.pdf"
+    assert pdf_filename(12) == "report_12m.pdf"
+
+
+async def test_build_report_pdf_returns_valid_pdf_bytes(
+    session: AsyncSession, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    user = await _seed_user(session)
+    _stub_compute_salary(monkeypatch, by_month={
+        (2026, 5): (Decimal("160"), Decimal("8000")),
+        (2026, 4): (Decimal("160"), Decimal("8000")),
+    })
+    data = await get_report_data(
+        session, user=user, tz=_TZ, today=date(2026, 5, 20), months=2,
+    )
+    buf = build_report_pdf(data, user)
+    blob = buf.getvalue()
+    # PDF magic header + plausible size for a one-page document.
+    assert blob.startswith(b"%PDF-")
+    assert blob.rstrip().endswith(b"%%EOF")
+    assert len(blob) > 2000
+
+
+async def test_build_report_pdf_handles_overpaid(
+    session: AsyncSession, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    user = await _seed_user(session)
+    _stub_compute_salary(monkeypatch, by_month={
+        (2026, 5): (Decimal("160"), Decimal("8000")),
+    })
+    await record_payment(
+        session, user_id=user.id, paid_on=date(2026, 5, 5),
+        period_year=2026, period_month=5, amount=Decimal("9000"),
+        recorded_by_id=user.id,
+    )
+    await session.commit()
+    data = await get_report_data(
+        session, user=user, tz=_TZ, today=date(2026, 5, 20), months=1,
+    )
+    buf = build_report_pdf(data, user)
+    assert buf.getvalue().startswith(b"%PDF-")
