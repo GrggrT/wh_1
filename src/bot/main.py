@@ -39,6 +39,7 @@ from src.bot.handlers import (
     settings as settings_handler,
 )
 from src.bot.middlewares.features import FeatureGateMiddleware
+from src.bot.middlewares.fsm_breadcrumbs import FSMBreadcrumbMiddleware
 from src.bot.scheduler_runner import run_scheduler, run_webhook_healer
 from src.bot.strings import t
 from src.core.config import Settings, get_settings
@@ -304,6 +305,9 @@ async def main() -> None:
     dp.message.middleware(user_resolve)
     dp.callback_query.middleware(user_resolve)
     dp.message.middleware(FeatureGateMiddleware())
+    fsm_breadcrumbs = FSMBreadcrumbMiddleware()
+    dp.message.middleware(fsm_breadcrumbs)
+    dp.callback_query.middleware(fsm_breadcrumbs)
 
     dp.include_router(onboarding.router)
     dp.include_router(common.router)
