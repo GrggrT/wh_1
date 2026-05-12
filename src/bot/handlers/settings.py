@@ -5,6 +5,7 @@ from __future__ import annotations
 import contextlib
 
 from aiogram import F, Router
+from aiogram.exceptions import TelegramAPIError
 from aiogram.filters import Command
 from aiogram.types import (
     CallbackQuery,
@@ -86,4 +87,12 @@ async def cb_toggle(query: CallbackQuery, db_user: User | None = None) -> None:
         # Telegram may complain "message not modified"; ignore that.
         with contextlib.suppress(Exception):
             await query.message.edit_text(_body(snap), reply_markup=_keyboard(snap))
+    # Republish the BotCommands menu so the new toggle state is reflected
+    # in the user's "/" autocomplete list right away.
+    bot = query.bot
+    if bot is not None:
+        from src.bot.main import compose_bot_commands  # local import: avoid cycle
+
+        with contextlib.suppress(TelegramAPIError):
+            await bot.set_my_commands(compose_bot_commands(snap))
     await query.answer(t("settings_saved"))

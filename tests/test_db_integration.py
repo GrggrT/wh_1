@@ -170,7 +170,9 @@ async def test_list_recent_entries_filters_window_and_orders(
     session: AsyncSession,
 ) -> None:
     user = await _seed_user(session)
-    today = date(2026, 5, 11)
+    # Use real today so the service's date.today() window matches the seeded
+    # entries; otherwise the test becomes calendar-sensitive.
+    today = date.today()
     for offset in range(0, 20):
         await upsert_day_entry(
             session,
@@ -192,7 +194,7 @@ async def test_list_recent_entries_only_own_user(
 ) -> None:
     a = await _seed_user(session, tg_id=1)
     b = await _seed_user(session, tg_id=2)
-    today = date(2026, 5, 11)
+    today = date.today()
     await upsert_day_entry(session, user_id=a.id, day=today, hours=Decimal("8"))
     await upsert_day_entry(session, user_id=b.id, day=today, hours=Decimal("4"))
     await session.commit()

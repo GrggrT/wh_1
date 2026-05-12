@@ -9,7 +9,7 @@ import structlog
 from aiogram import BaseMiddleware, Bot, Dispatcher
 from aiogram.exceptions import TelegramAPIError
 from aiogram.fsm.storage.memory import MemoryStorage
-from aiogram.types import BotCommand, Message, TelegramObject
+from aiogram.types import BotCommand, CallbackQuery, Message, TelegramObject
 
 from src.bot.handlers import (
     admin,
@@ -36,6 +36,8 @@ from src.bot.strings import t
 from src.core.config import Settings, get_settings
 from src.core.db import dispose_engine, get_session, init_engine
 from src.core.sentry import capture_exception, init_sentry
+from src.services.app_settings import SettingsSnapshot
+from src.services.app_settings import get_settings as get_app_settings
 from src.services.crews import ROLE_OWNER, ensure_owner_role
 from src.services.shifts import ensure_user
 
@@ -71,9 +73,11 @@ logger = structlog.get_logger()
 
 
 class UserResolveMiddleware(BaseMiddleware):
-    """Resolve the DB user for each incoming Message and inject it into data.
+    """Resolve the DB user for each incoming Message/CallbackQuery and inject it.
 
     Bootstraps the configured owner_tg_id as role='owner' on first contact.
+    Without this, callback-query handlers that take ``db_user`` would receive
+    None and silently no-op (inline buttons appear to do nothing).
     """
 
     def __init__(self, owner_tg_id: int) -> None:
@@ -85,104 +89,148 @@ class UserResolveMiddleware(BaseMiddleware):
         event: TelegramObject,
         data: dict[str, Any],
     ) -> Any:  # noqa: ANN401
-        if not isinstance(event, Message) or event.from_user is None:
+        if not isinstance(event, Message | CallbackQuery):
+            return await handler(event, data)
+        tg_user = event.from_user
+        if tg_user is None:
             return await handler(event, data)
         async for session in get_session():
             user = await ensure_user(
-                session, event.from_user.id, event.from_user.full_name,
+                session, tg_user.id, tg_user.full_name,
             )
-            if event.from_user.id == self.owner_tg_id and user.role != ROLE_OWNER:
+            if tg_user.id == self.owner_tg_id and user.role != ROLE_OWNER:
                 await ensure_owner_role(session, self.owner_tg_id)
             await session.commit()
         data["db_user"] = user
         return await handler(event, data)
 
 
-_BOT_COMMANDS: list[BotCommand] = [
+# Bot commands are split into groups so the visible command menu shrinks to
+# the simple-mode core by default. Advanced groups are appended only when the
+# matching toggle is on (see compose_bot_commands). Handler routers stay
+# registered regardless — typing the command still works.
+
+_CORE_COMMANDS: list[BotCommand] = [
     BotCommand(command="start", description="Начало работы"),
-    BotCommand(command="help", description="Справка по командам"),
+    BotCommand(command="help", description="Справка"),
     BotCommand(command="menu", description="Главное меню"),
     BotCommand(command="h", description="Поставить часы за сегодня: /h 8"),
     BotCommand(command="my_days", description="Мои последние 14 дней"),
     BotCommand(command="edit_day", description="Изменить день: /edit_day YYYY-MM-DD <часы>"),
+    BotCommand(command="salary", description="Моя зарплата за месяц"),
+    BotCommand(command="my_advances", description="Мои авансы"),
+    BotCommand(command="my_rate", description="Моя ставка"),
     BotCommand(command="remind_on", description="Включить вечернее напоминание: /remind_on HH"),
     BotCommand(command="remind_off", description="Отключить вечернее напоминание"),
-    BotCommand(command="settings", description="Настройки режима бота (владелец)"),
+    BotCommand(command="whoami", description="Кто я"),
+    BotCommand(command="cancel", description="Отмена текущего действия"),
+]
+
+# Owner/foreman extras — always visible (the FeatureGateMiddleware filters
+# crew-scoped ones via their toggles). Workers can see them in the menu but
+# the handlers themselves reject non-owners.
+_OWNER_COMMANDS: list[BotCommand] = [
+    BotCommand(command="settings", description="Настройки бота (владелец)"),
     BotCommand(command="advance", description="Записать аванс: /advance <tg_id> <сумма>"),
-    BotCommand(command="my_advances", description="Мои авансы"),
-    BotCommand(command="crew_advances", description="Авансы бригады"),
-    BotCommand(command="salary", description="Зарплата за месяц"),
-    BotCommand(command="crew_salary", description="Зарплата бригады"),
+    BotCommand(command="set_rate", description="Ставка работника: /set_rate <tg_id> <ставка>"),
+    BotCommand(command="digest", description="Сводка дня (владелец)"),
+    BotCommand(command="status", description="Статус бота (владелец)"),
+    BotCommand(command="stats", description="Глобальная статистика (владелец)"),
+]
+
+_LEGACY_SHIFTS_COMMANDS: list[BotCommand] = [
+    BotCommand(command="quick_start", description="Быстрый старт смены"),
+    BotCommand(command="my_open", description="Моя открытая смена"),
     BotCommand(command="today", description="Смены за сегодня"),
     BotCommand(command="me_yesterday", description="Мои смены за вчера"),
-    BotCommand(command="quick_start", description="Быстрый старт смены (последний объект)"),
     BotCommand(command="week", description="Смены за неделю"),
     BotCommand(command="month", description="Смены за месяц"),
     BotCommand(command="me", description="Мой месяц: /me YYYY-MM"),
     BotCommand(command="export", description="Выгрузка в Excel: /export YYYY-MM"),
-    BotCommand(command="join", description="Присоединиться к бригаде: /join <код>"),
-    BotCommand(command="invite", description="Код приглашения (для бригадира)"),
-    BotCommand(command="crew", description="Состав бригады"),
-    BotCommand(command="remove_member", description="Вывести работника из бригады"),
-    BotCommand(command="crew_today", description="Бригада за сегодня"),
-    BotCommand(command="crew_week", description="Бригада за неделю"),
-    BotCommand(command="crew_month", description="Бригада за месяц"),
-    BotCommand(command="crew_export", description="Экспорт бригады: /crew_export YYYY-MM"),
-    BotCommand(command="add_foreman", description="Назначить бригадира (владелец)"),
-    BotCommand(command="transfer_crew", description="Перевести работника (владелец)"),
-    BotCommand(command="foremen", description="Список бригадиров (владелец)"),
-    BotCommand(command="crew_open", description="Кто сейчас на смене (бригадир)"),
-    BotCommand(command="crew_rates", description="Ставки бригады (бригадир)"),
-    BotCommand(command="set_rate", description="Установить ставку: /set_rate <tg_id> <ставка>"),
-    BotCommand(command="set_crew_rate", description="Ставка бригады по умолчанию"),
-    BotCommand(command="my_rate", description="Моя ставка"),
-    BotCommand(command="break_start", description="Начать перерыв"),
-    BotCommand(command="break_stop", description="Завершить перерыв"),
-    BotCommand(command="break_status", description="Статус текущего перерыва"),
-    BotCommand(command="add_break", description="Добавить перерыв (бригадир/владелец)"),
-    BotCommand(command="edit_break", description="Изменить перерыв (бригадир/владелец)"),
-    BotCommand(command="delete_break", description="Удалить перерыв (бригадир/владелец)"),
     BotCommand(command="shifts", description="Последние смены"),
-    BotCommand(command="crew_shifts", description="Последние смены бригады (бригадир)"),
-    BotCommand(command="edit_shift", description="Изменить смену (бригадир/владелец)"),
-    BotCommand(command="delete_shift", description="Удалить смену (бригадир/владелец)"),
+    BotCommand(command="shift_info", description="Детали смены: /shift_info <id>"),
+    BotCommand(command="shift_photos", description="Фото смены: /shift_photos <id>"),
+    BotCommand(command="edit_shift", description="Изменить смену"),
+    BotCommand(command="delete_shift", description="Удалить смену"),
+    BotCommand(command="restore_shift", description="Восстановить удалённую (владелец)"),
     BotCommand(command="note", description="Заметка к открытой смене"),
     BotCommand(command="work_type", description="Тип работ для открытой смены"),
     BotCommand(command="stop_for", description="Закрыть смену работника (бригадир)"),
-    BotCommand(command="audit", description="История изменений смены (бригадир)"),
+    BotCommand(command="audit", description="История изменений смены"),
     BotCommand(command="admin_audit", description="Журнал админ-действий (владелец)"),
-    BotCommand(command="shift_info", description="Детали смены: /shift_info <id>"),
-    BotCommand(command="shift_photos", description="Фото смены: /shift_photos <id>"),
-    BotCommand(command="restore_shift", description="Восстановить удалённую (владелец)"),
+    BotCommand(command="active", description="Все открытые смены (владелец)"),
+    BotCommand(command="break_start", description="Начать перерыв"),
+    BotCommand(command="break_stop", description="Завершить перерыв"),
+    BotCommand(command="break_status", description="Статус текущего перерыва"),
+    BotCommand(command="add_break", description="Добавить перерыв"),
+    BotCommand(command="edit_break", description="Изменить перерыв"),
+    BotCommand(command="delete_break", description="Удалить перерыв"),
+    BotCommand(command="work_stats", description="Часы по типам работ за месяц"),
+    BotCommand(command="digest_week", description="Сводка прошлой недели"),
+    BotCommand(command="digest_month", description="Сводка месяца"),
+]
+
+_SITES_COMMANDS: list[BotCommand] = [
     BotCommand(command="sites", description="Список объектов"),
-    BotCommand(command="site_info", description="Детали объекта (бригадир/владелец)"),
+    BotCommand(command="site_info", description="Детали объекта"),
     BotCommand(command="sites_archive", description="Архивные объекты"),
-    BotCommand(command="set_site_rate", description="Ставка объекта: /set_site_rate <id> <ставка>"),
-    BotCommand(command="archive_site", description="Архивировать объект: /archive_site <id>"),
-    BotCommand(command="unarchive_site", description="Вернуть объект из архива"),
+    BotCommand(command="set_site_rate", description="Ставка объекта"),
+    BotCommand(command="archive_site", description="Архивировать объект"),
+    BotCommand(command="unarchive_site", description="Вернуть из архива"),
     BotCommand(command="rename_site", description="Переименовать объект"),
-    BotCommand(command="geofence_set", description="Задать границу объекта: /geofence_set <id>"),
+    BotCommand(command="site_stats", description="Часы по объектам за месяц"),
+]
+
+_GEOFENCE_COMMANDS: list[BotCommand] = [
+    BotCommand(command="geofence_set", description="Задать границу объекта"),
     BotCommand(command="geofence_save", description="Сохранить границу"),
     BotCommand(command="geofence_cancel", description="Отменить ввод границы"),
-    BotCommand(command="geofence_clear", description="Удалить границу: /geofence_clear <id>"),
-    BotCommand(command="whoami", description="Кто я и в какой бригаде"),
-    BotCommand(command="my_open", description="Моя текущая открытая смена"),
+    BotCommand(command="geofence_clear", description="Удалить границу"),
+]
+
+_CREWS_COMMANDS: list[BotCommand] = [
+    BotCommand(command="join", description="Присоединиться: /join <код>"),
+    BotCommand(command="invite", description="Код приглашения (бригадир)"),
+    BotCommand(command="crew", description="Состав бригады"),
+    BotCommand(command="remove_member", description="Вывести из бригады"),
     BotCommand(command="leave_crew", description="Выйти из бригады"),
-    BotCommand(command="status", description="Статус бота (владелец)"),
-    BotCommand(command="active", description="Все открытые смены (владелец)"),
-    BotCommand(command="stats", description="Глобальная статистика (владелец)"),
-    BotCommand(command="work_stats", description="Часы по типам работ за месяц (владелец)"),
-    BotCommand(command="site_stats", description="Часы по объектам за месяц (владелец)"),
-    BotCommand(command="digest", description="Сводка дня (владелец)"),
-    BotCommand(command="digest_week", description="Сводка прошлой недели (владелец)"),
-    BotCommand(command="digest_month", description="Сводка месяца (владелец)"),
-    BotCommand(command="cancel", description="Отмена текущего действия"),
+    BotCommand(command="add_foreman", description="Назначить бригадира (владелец)"),
+    BotCommand(command="transfer_crew", description="Перевести работника (владелец)"),
+    BotCommand(command="foremen", description="Список бригадиров (владелец)"),
+    BotCommand(command="crew_today", description="Бригада за сегодня"),
+    BotCommand(command="crew_week", description="Бригада за неделю"),
+    BotCommand(command="crew_month", description="Бригада за месяц"),
+    BotCommand(command="crew_export", description="Экспорт бригады"),
+    BotCommand(command="crew_open", description="Кто сейчас на смене"),
+    BotCommand(command="crew_rates", description="Ставки бригады"),
+    BotCommand(command="set_crew_rate", description="Ставка бригады по умолчанию"),
+    BotCommand(command="crew_shifts", description="Последние смены бригады"),
+    BotCommand(command="crew_advances", description="Авансы бригады"),
+    BotCommand(command="crew_salary", description="Зарплата бригады"),
 ]
 
 
+def compose_bot_commands(snap: SettingsSnapshot) -> list[BotCommand]:
+    """Build the BotCommands list reflecting current product-mode toggles."""
+    commands = list(_CORE_COMMANDS) + list(_OWNER_COMMANDS)
+    if snap.legacy_clock_inout_enabled:
+        commands += _LEGACY_SHIFTS_COMMANDS
+    if snap.sites_enabled:
+        commands += _SITES_COMMANDS
+    if snap.geofence_enabled:
+        commands += _GEOFENCE_COMMANDS
+    if snap.crews_enabled:
+        commands += _CREWS_COMMANDS
+    return commands
+
+
 async def _publish_bot_commands(bot: Bot) -> None:
+    """Publish the slim set of BotCommands based on the current settings."""
+    async for session in get_session():
+        snap = await get_app_settings(session)
+        await session.commit()
     try:
-        await bot.set_my_commands(_BOT_COMMANDS)
+        await bot.set_my_commands(compose_bot_commands(snap))
     except TelegramAPIError:
         logger.warning("set_my_commands_failed")
 
@@ -240,7 +288,9 @@ async def main() -> None:
     storage = MemoryStorage()
     dp = Dispatcher(storage=storage)
 
-    dp.message.middleware(UserResolveMiddleware(settings.owner_tg_id))
+    user_resolve = UserResolveMiddleware(settings.owner_tg_id)
+    dp.message.middleware(user_resolve)
+    dp.callback_query.middleware(user_resolve)
     dp.message.middleware(FeatureGateMiddleware())
 
     dp.include_router(onboarding.router)
