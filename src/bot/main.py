@@ -322,18 +322,28 @@ async def main() -> None:
     http_task: asyncio.Task[None] | None = None
     if serve_http:
         if webhook_enabled:
+            full_url = settings.webhook_url.strip().rstrip("/") + settings.webhook_path
             logger.info(
                 "webhook_starting",
-                url=settings.webhook_url,
+                full_url=full_url,
                 path=settings.webhook_path,
             )
-            full_url = settings.webhook_url.rstrip("/") + settings.webhook_path
-            with contextlib.suppress(TelegramAPIError):
+            try:
                 await bot.set_webhook(
                     url=full_url,
                     secret_token=settings.webhook_secret,
                     drop_pending_updates=False,
                 )
+                info = await bot.get_webhook_info()
+                logger.info(
+                    "webhook_set_ok",
+                    registered_url=info.url,
+                    pending_update_count=info.pending_update_count,
+                    last_error_message=info.last_error_message,
+                )
+            except TelegramAPIError:
+                logger.exception("webhook_set_failed")
+                raise
         if settings.admin_password:
             logger.info("admin_panel_starting", port=settings.admin_port)
         http_task = asyncio.create_task(_run_uvicorn(settings, bot, dp))
