@@ -119,31 +119,25 @@ _CORE_COMMANDS: list[BotCommand] = [
     BotCommand(command="help", description="Справка"),
     BotCommand(command="menu", description="Главное меню"),
     BotCommand(command="h", description="Поставить часы за сегодня: /h 8"),
-    BotCommand(command="my_days", description="Мои последние 14 дней"),
-    BotCommand(command="calendar", description="Календарь — редактировать данные по датам"),
-    BotCommand(command="edit_day", description="Изменить день: /edit_day YYYY-MM-DD <часы>"),
+    BotCommand(command="calendar", description="Календарь — редактировать любую дату"),
     BotCommand(command="period", description="Расчёт за период (часы + выплаты)"),
     BotCommand(command="cash", description="Денежный поток за месяц"),
     BotCommand(command="owed", description="Что ещё не выплачено"),
-    BotCommand(command="salary", description="То же, что /period"),
-    BotCommand(command="my_advances", description="Мои авансы"),
+    BotCommand(command="my_days", description="Мои последние 14 дней"),
     BotCommand(command="my_rate", description="Моя ставка"),
-    BotCommand(command="remind_on", description="Включить вечернее напоминание: /remind_on HH"),
-    BotCommand(command="remind_off", description="Отключить вечернее напоминание"),
+    BotCommand(command="remind_on", description="Вечернее напоминание: /remind_on HH"),
+    BotCommand(command="remind_off", description="Отключить напоминание"),
     BotCommand(command="whoami", description="Кто я"),
     BotCommand(command="cancel", description="Отмена текущего действия"),
 ]
 
-# Owner/foreman extras — always visible (the FeatureGateMiddleware filters
-# crew-scoped ones via their toggles). Workers can see them in the menu but
-# the handlers themselves reject non-owners.
+# Owner extras. Single-user bot, so this stays tiny — money-entry commands
+# live inside /calendar now.
 _OWNER_COMMANDS: list[BotCommand] = [
-    BotCommand(command="settings", description="Настройки бота (владелец)"),
-    BotCommand(command="advance", description="Записать аванс: /advance <tg_id> <сумма>"),
-    BotCommand(command="set_rate", description="Ставка работника: /set_rate <tg_id> <ставка>"),
-    BotCommand(command="digest", description="Сводка дня (владелец)"),
-    BotCommand(command="status", description="Статус бота (владелец)"),
-    BotCommand(command="stats", description="Глобальная статистика (владелец)"),
+    BotCommand(command="settings", description="Настройки бота"),
+    BotCommand(command="set_rate", description="Ставка: /set_rate <tg_id> <ставка>"),
+    BotCommand(command="status", description="Статус бота"),
+    BotCommand(command="stats", description="Глобальная статистика"),
 ]
 
 _LEGACY_SHIFTS_COMMANDS: list[BotCommand] = [

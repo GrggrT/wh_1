@@ -490,12 +490,12 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
         "onb_cancelled": (
             "Настройка прервана. Запусти ещё раз через /start, когда будешь готов."
         ),
-        # Phase 6.1 — simple-mode menu
+        # Phase 6.1 — simple-mode menu (Phase 6.8: reformatted)
         "menu_btn_hours": "🕒 Часы за сегодня",
-        "menu_btn_my_days": "📅 Мои дни",
-        "menu_btn_salary": "💰 Зарплата",
-        "menu_btn_advances": "💵 Авансы",
         "menu_btn_calendar": "📆 Календарь",
+        "menu_btn_period": "📊 Период",
+        "menu_btn_cash": "💸 Касса",
+        "menu_btn_my_days": "📅 Мои дни",
         "menu_hint": "Главное меню. Жми кнопки или /help.",
         # Phase 6.6 — inline calendar
         "cal_header": "📆 {month} {year}\nЖми на дату, чтобы открыть.",
@@ -571,23 +571,18 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
         ),
         "help_core": (
             "Команды:\n"
-            "/start — начало работы\n"
-            "/help — справка\n"
             "/h <часы> — поставить часы за сегодня (например: /h 8)\n"
-            "/my_days — мои последние 14 дней\n"
             "/calendar — календарь: редактировать любую дату\n"
-            "/edit_day YYYY-MM-DD <часы> — изменить день\n"
-            "/remind_on HH — вечернее напоминание поставить часы\n"
-            "/remind_off — отключить напоминание\n"
-            "/period [YYYY-MM] — расчёт за период (с учётом выплат)\n"
-            "/cash [YYYY-MM] — все выплаты и авансы за месяц\n"
+            "/period [YYYY-MM] — расчёт за период (часы + выплаты)\n"
+            "/cash [YYYY-MM] — денежный поток за месяц\n"
             "/owed — что ещё не выплачено\n"
-            "/salary [YYYY-MM] — то же, что /period\n"
-            "/my_advances [YYYY-MM] — мои авансы\n"
-            "/advance <tg_id> <сумма> — записать аванс (бригадир/владелец)\n"
-            "/whoami — кто я / /my_rate — моя ставка\n"
-            "/set_rate <tg_id> <ставка> — ставка работника (бригадир/владелец)\n"
-            "/settings — настройки режима (владелец)\n"
+            "/my_days — мои последние 14 дней\n"
+            "/my_rate — моя ставка\n"
+            "/set_rate <tg_id> <ставка> — изменить ставку\n"
+            "/remind_on HH — вечернее напоминание\n"
+            "/remind_off — отключить напоминание\n"
+            "/whoami — кто я\n"
+            "/settings — настройки режима\n"
             "/cancel — отмена текущего действия"
         ),
         "help_section_legacy": (

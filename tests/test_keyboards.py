@@ -31,9 +31,10 @@ def test_simple_menu_default_worker_has_only_core_buttons() -> None:
     markup = simple_menu(_snap(), role="worker")
     labels = _labels(markup)
     assert t("menu_btn_hours") in labels
+    assert t("menu_btn_calendar") in labels
+    assert t("menu_btn_period") in labels
+    assert t("menu_btn_cash") in labels
     assert t("menu_btn_my_days") in labels
-    assert t("menu_btn_salary") in labels
-    assert t("menu_btn_advances") in labels
     # Legacy + crew buttons are hidden by default.
     assert not any("смену" in label.lower() for label in labels)
     assert not any("бригад" in label.lower() for label in labels)

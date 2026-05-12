@@ -6,7 +6,7 @@ from aiogram.filters.command import CommandObject
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
-from src.bot.handlers.advances import cmd_my_advances, cmd_salary
+from src.bot.handlers.accounting import cmd_cash, cmd_period
 from src.bot.handlers.calendar import cmd_calendar
 from src.bot.handlers.day_entries import cmd_h, cmd_my_days
 from src.bot.handlers.onboarding import start_wizard
@@ -104,14 +104,14 @@ async def btn_my_days(message: Message, db_user: User | None = None) -> None:
     await cmd_my_days(message, db_user=db_user)
 
 
-@router.message(F.text == t("menu_btn_salary"))
-async def btn_salary(message: Message, db_user: User | None = None) -> None:
-    await cmd_salary(message, _noargs(), db_user=db_user)
+@router.message(F.text == t("menu_btn_period"))
+async def btn_period(message: Message, db_user: User | None = None) -> None:
+    await cmd_period(message, _noargs(), db_user=db_user)
 
 
-@router.message(F.text == t("menu_btn_advances"))
-async def btn_advances(message: Message, db_user: User | None = None) -> None:
-    await cmd_my_advances(message, _noargs(), db_user=db_user)
+@router.message(F.text == t("menu_btn_cash"))
+async def btn_cash(message: Message, db_user: User | None = None) -> None:
+    await cmd_cash(message, _noargs(), db_user=db_user)
 
 
 @router.message(F.text == t("menu_btn_calendar"))

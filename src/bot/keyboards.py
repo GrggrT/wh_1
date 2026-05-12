@@ -33,19 +33,25 @@ def main_menu(role: str = "worker") -> ReplyKeyboardMarkup:
 def simple_menu(
     snap: SettingsSnapshot, role: str = "worker",
 ) -> ReplyKeyboardMarkup:
-    """Default reply keyboard: simple-mode buttons + (optional) legacy +
-    (optional) foreman/owner shortcuts. Labels match `menu_btn_*` strings."""
+    """Default reply keyboard for the single-user accounting product.
+
+    Layout (Phase 6.8):
+      [🕒 Часы за сегодня] [📆 Календарь]
+      [📊 Период]          [💸 Касса]
+      [📅 Мои дни]
+    Plus optional legacy/crews rows when the matching toggle is on.
+    """
     rows: list[list[KeyboardButton]] = [
         [
             KeyboardButton(text=t("menu_btn_hours")),
-            KeyboardButton(text=t("menu_btn_my_days")),
-        ],
-        [
-            KeyboardButton(text=t("menu_btn_salary")),
-            KeyboardButton(text=t("menu_btn_advances")),
-        ],
-        [
             KeyboardButton(text=t("menu_btn_calendar")),
+        ],
+        [
+            KeyboardButton(text=t("menu_btn_period")),
+            KeyboardButton(text=t("menu_btn_cash")),
+        ],
+        [
+            KeyboardButton(text=t("menu_btn_my_days")),
         ],
     ]
     if snap.legacy_clock_inout_enabled:
