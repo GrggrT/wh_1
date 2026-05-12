@@ -309,12 +309,17 @@ def period_picker_keyboard(
 async def _send_period(
     message: Message, db_user: User, year: int, month: int,
 ) -> None:
+    from src.bot.handlers.report import period_png_keyboard
+
     tz = ZoneInfo(get_settings().timezone)
     async for session in get_session():
         ledger = await get_period_ledger(
             session, user=db_user, year=year, month=month, tz=tz,
         )
-    await message.answer(format_period(ledger, db_user))
+    await message.answer(
+        format_period(ledger, db_user),
+        reply_markup=period_png_keyboard(year, month),
+    )
 
 
 @router.message(Command("period"))

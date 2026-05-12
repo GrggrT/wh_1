@@ -11,7 +11,7 @@ from src.bot.handlers.calendar import cmd_calendar
 from src.bot.handlers.day_entries import cmd_h
 from src.bot.handlers.onboarding import start_wizard
 from src.bot.handlers.profile import cmd_profile
-from src.bot.handlers.report import cmd_report
+from src.bot.handlers.report import report_menu_keyboard
 from src.bot.keyboards import simple_menu
 from src.bot.strings import t
 from src.core.db import get_session
@@ -103,7 +103,11 @@ async def btn_hours(message: Message, db_user: User | None = None) -> None:
 
 @router.message(F.text == t("menu_btn_reports"))
 async def btn_reports(message: Message, db_user: User | None = None) -> None:
-    await cmd_report(message, _noargs(), db_user=db_user)
+    if db_user is None:
+        return
+    await message.answer(
+        t("report_menu_prompt"), reply_markup=report_menu_keyboard(),
+    )
 
 
 @router.message(F.text == t("menu_btn_period"))

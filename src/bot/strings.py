@@ -557,9 +557,15 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
         ),
         "report_total_overpaid": "Переплата (всего): {overpaid} {currency}",
         "report_bad_arg": "Использование: /report [N] — где N от 1 до 24 месяцев.",
-        "report_btn_xlsx": "📥 Скачать XLSX",
-        "report_btn_pdf": "📄 Скачать PDF",
-        "report_btn_png": "📈 Скачать PNG",
+        "report_btn_xlsx": "📥 XLSX",
+        "report_btn_pdf": "📄 PDF",
+        "report_btn_png": "📈 PNG",
+        "report_menu_prompt": "📊 За какой период?",
+        "report_menu_3m": "3 мес",
+        "report_menu_6m": "6 мес",
+        "report_menu_12m": "12 мес",
+        "report_menu_24m": "24 мес",
+        "period_btn_png": "📈 График",
         # Phase 6.7 — period / cashflow / owed accounting
         "period_pick_prompt": "📊 За какой месяц показать?",
         "period_older_btn": "◀ Раньше",
@@ -647,6 +653,7 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
             "/period [YYYY-MM] — расчёт за период (часы + выплаты)\n"
             "/cash [YYYY-MM] — денежный поток за месяц\n"
             "/owed — что ещё не выплачено\n"
+            "/report [N] — отчёт за N месяцев (XLSX/PDF/PNG)\n"
             "/my_days — мои последние 14 дней\n"
             "/profile — имя, ставка, валюта, напоминание\n"
             "/my_rate — моя ставка\n"
@@ -654,7 +661,9 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
             "/remind_off — отключить напоминание\n"
             "/whoami — кто я\n"
             "/settings — настройки режима\n"
-            "/cancel — отмена текущего действия"
+            "/cancel — отмена текущего действия\n"
+            "\nМожно писать словами: «отчёт за 6 мес», «период май», "
+            "«касса за апрель», «долг»."
         ),
         "help_section_legacy": (
             "\n\nСмены (старый режим):\n"

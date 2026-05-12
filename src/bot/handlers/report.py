@@ -42,6 +42,10 @@ MAX_MONTHS = 24
 _XLSX_CB_PREFIX = "report:xlsx:"
 _PDF_CB_PREFIX = "report:pdf:"
 _PNG_CB_PREFIX = "report:png:"
+_RUN_CB_PREFIX = "report:run:"
+_PERIOD_PNG_CB_PREFIX = "period:png:"  # PNG for a single (year, month)
+
+_MENU_WINDOWS: tuple[int, ...] = (3, 6, 12, 24)
 
 
 def parse_months_arg(raw: str | None) -> int | None:
@@ -58,6 +62,35 @@ def parse_months_arg(raw: str | None) -> int | None:
     if not (MIN_MONTHS <= n <= MAX_MONTHS):
         return None
     return n
+
+
+def period_png_keyboard(year: int, month: int) -> InlineKeyboardMarkup:
+    """Single-button keyboard offering a PNG chart for ``(year, month)``."""
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text=t("period_btn_png"),
+                    callback_data=f"{_PERIOD_PNG_CB_PREFIX}{year}-{month:02d}",
+                ),
+            ],
+        ],
+    )
+
+
+def report_menu_keyboard() -> InlineKeyboardMarkup:
+    """Inline picker shown when the «📊 Отчёты» button is tapped."""
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text=t(f"report_menu_{m}m"),
+                    callback_data=f"{_RUN_CB_PREFIX}{m}",
+                )
+                for m in _MENU_WINDOWS
+            ],
+        ],
+    )
 
 
 def _download_keyboard(months: int) -> InlineKeyboardMarkup:
@@ -166,3 +199,70 @@ async def cb_report_png(
     await _send_report_file(
         callback, db_user, _PNG_CB_PREFIX, build_report_png, png_filename,
     )
+
+
+@router.callback_query(
+    lambda cq: (cq.data or "").startswith(_PERIOD_PNG_CB_PREFIX),
+)
+async def cb_period_png(
+    callback: CallbackQuery, db_user: User | None = None,
+) -> None:
+    """Build a single-month PNG anchored at the requested (year, month)."""
+    if db_user is None or callback.data is None or callback.message is None:
+        await callback.answer()
+        return
+    arg = callback.data[len(_PERIOD_PNG_CB_PREFIX):]
+    try:
+        year = int(arg[:4])
+        month = int(arg[5:7])
+    except (ValueError, IndexError):
+        await callback.answer()
+        return
+    if not (1 <= month <= 12):
+        await callback.answer()
+        return
+
+    from src.services.advances import month_bounds
+
+    _, last_day = month_bounds(year, month)
+    tz = ZoneInfo(get_settings().timezone)
+    async for session in get_session():
+        data = await get_report_data(
+            session, user=db_user, tz=tz, today=last_day, months=1,
+        )
+    buf = build_report_png(data, db_user)
+    document = BufferedInputFile(
+        buf.getvalue(), filename=f"period_{year}-{month:02d}.png",
+    )
+    await callback.message.answer_document(document)
+    await callback.answer()
+
+
+@router.callback_query(lambda cq: (cq.data or "").startswith(_RUN_CB_PREFIX))
+async def cb_report_run(
+    callback: CallbackQuery, db_user: User | None = None,
+) -> None:
+    """Render the text report for the window picked from the inline menu."""
+    if db_user is None or callback.data is None or callback.message is None:
+        await callback.answer()
+        return
+    try:
+        months = int(callback.data[len(_RUN_CB_PREFIX):])
+    except ValueError:
+        await callback.answer()
+        return
+    if not (MIN_MONTHS <= months <= MAX_MONTHS):
+        await callback.answer()
+        return
+
+    tz = ZoneInfo(get_settings().timezone)
+    today = datetime.now(tz=tz).date()
+    async for session in get_session():
+        data = await get_report_data(
+            session, user=db_user, tz=tz, today=today, months=months,
+        )
+    await callback.message.answer(
+        format_report_text(data, db_user),
+        reply_markup=_download_keyboard(months),
+    )
+    await callback.answer()
