@@ -592,6 +592,16 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
             "Файл слишком большой (лимит 5 МБ). Это точно бэкап от /backup?"
         ),
         "restore_failed": "Не получилось прочитать файл: {error}",
+        "restore_preview": (
+            "📋 Файл прочитан. Будет добавлено (существующее не трогаем):\n"
+            "• Дней: {days}\n"
+            "• Авансов: {advances}\n"
+            "• Выплат: {payments}\n\n"
+            "Применить?"
+        ),
+        "restore_btn_confirm": "✅ Применить",
+        "restore_btn_cancel": "❌ Отменить",
+        "restore_cancelled": "Восстановление отменено.",
         "restore_done": (
             "✅ Восстановление завершено.\n"
             "Дни: добавлено {days_in}, пропущено {days_skip}.\n"

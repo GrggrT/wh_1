@@ -20,7 +20,13 @@ from aiogram import Bot, F, Router
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
-from aiogram.types import BufferedInputFile, Message
+from aiogram.types import (
+    BufferedInputFile,
+    CallbackQuery,
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+    Message,
+)
 from sqlalchemy import select
 
 from src.bot.strings import t
@@ -39,6 +45,7 @@ router = Router()
 
 class RestoreFlow(StatesGroup):
     awaiting_document = State()
+    awaiting_confirm = State()
 
 
 @router.message(Command("backup"))
@@ -97,9 +104,23 @@ async def cmd_restore(message: Message, state: FSMContext) -> None:
 
 
 @router.message(RestoreFlow.awaiting_document, Command("cancel"))
+@router.message(RestoreFlow.awaiting_confirm, Command("cancel"))
 async def cmd_restore_cancel(message: Message, state: FSMContext) -> None:
     await state.clear()
     await message.answer(t("cancelled"))
+
+
+def _restore_confirm_kb() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        inline_keyboard=[[
+            InlineKeyboardButton(
+                text=t("restore_btn_confirm"), callback_data="restore:apply",
+            ),
+            InlineKeyboardButton(
+                text=t("restore_btn_cancel"), callback_data="restore:cancel",
+            ),
+        ]],
+    )
 
 
 @router.message(RestoreFlow.awaiting_document, F.document)
@@ -138,12 +159,74 @@ async def msg_restore_document(
             await state.clear()
         return
 
+    await state.update_data(file_id=document.file_id)
+    await state.set_state(RestoreFlow.awaiting_confirm)
+    await message.answer(
+        t(
+            "restore_preview",
+            days=len(plan.days),
+            advances=len(plan.advances),
+            payments=len(plan.payments),
+        ),
+        reply_markup=_restore_confirm_kb(),
+    )
+
+
+@router.callback_query(RestoreFlow.awaiting_confirm, F.data == "restore:cancel")
+async def cb_restore_cancel(
+    callback: CallbackQuery, state: FSMContext,
+) -> None:
+    await state.clear()
+    if isinstance(callback.message, Message):
+        with contextlib.suppress(Exception):
+            await callback.message.edit_reply_markup(reply_markup=None)
+        await callback.message.answer(t("restore_cancelled"))
+    await callback.answer()
+
+
+@router.callback_query(RestoreFlow.awaiting_confirm, F.data == "restore:apply")
+async def cb_restore_apply(
+    callback: CallbackQuery,
+    state: FSMContext,
+    bot: Bot,
+    db_user: User | None = None,
+) -> None:
+    if db_user is None:
+        await callback.answer()
+        return
+    data = await state.get_data()
+    file_id = data.get("file_id")
+    if not file_id or not isinstance(callback.message, Message):
+        await state.clear()
+        await callback.answer()
+        return
+
+    buf = BytesIO()
+    file = await bot.get_file(file_id)
+    if file.file_path is None:
+        await callback.message.answer(t("restore_failed", error="no file path"))
+        await state.clear()
+        await callback.answer()
+        return
+    await bot.download_file(file.file_path, destination=buf)
+    buf.seek(0)
+
+    try:
+        plan = parse_backup_xlsx(buf)
+    except BackupParseError as exc:
+        await callback.message.answer(t("restore_failed", error=str(exc)))
+        await state.clear()
+        await callback.answer()
+        return
+
     async for session in get_session():
         result = await apply_restore(session, user=db_user, plan=plan)
         await session.commit()
 
     await state.clear()
-    await message.answer(
+    with contextlib.suppress(Exception):
+        await callback.message.edit_reply_markup(reply_markup=None)
+    await callback.message.answer(
         t(
             "restore_done",
             days_in=result.days_inserted, days_skip=result.days_skipped,
@@ -151,8 +234,17 @@ async def msg_restore_document(
             pay_in=result.payments_inserted, pay_skip=result.payments_skipped,
         ),
     )
+    await callback.answer()
 
 
 @router.message(RestoreFlow.awaiting_document)
 async def msg_restore_other(message: Message) -> None:
     await message.answer(t("restore_need_document"))
+
+
+@router.message(RestoreFlow.awaiting_confirm)
+async def msg_restore_awaiting_confirm(message: Message) -> None:
+    await message.answer(
+        t("restore_btn_confirm") + " / " + t("restore_btn_cancel"),
+        reply_markup=_restore_confirm_kb(),
+    )
