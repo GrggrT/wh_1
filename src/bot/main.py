@@ -31,7 +31,7 @@ from src.bot.handlers import (
     settings as settings_handler,
 )
 from src.bot.middlewares.features import FeatureGateMiddleware
-from src.bot.scheduler_runner import run_scheduler
+from src.bot.scheduler_runner import run_scheduler, run_webhook_healer
 from src.bot.strings import t
 from src.core.config import Settings, get_settings
 from src.core.db import dispose_engine, get_session, init_engine
@@ -317,6 +317,11 @@ async def main() -> None:
     scheduler_task = asyncio.create_task(run_scheduler(bot, settings))
 
     webhook_enabled = bool(settings.webhook_url and settings.webhook_secret)
+    healer_task: asyncio.Task[None] | None = (
+        asyncio.create_task(run_webhook_healer(bot, settings))
+        if webhook_enabled
+        else None
+    )
     serve_http = settings.admin_password or webhook_enabled
 
     http_task: asyncio.Task[None] | None = None
@@ -356,12 +361,19 @@ async def main() -> None:
         else:
             await dp.start_polling(bot)
     finally:
-        if webhook_enabled:
-            with contextlib.suppress(TelegramAPIError):
-                await bot.delete_webhook(drop_pending_updates=False)
+        # NOTE: do NOT call delete_webhook on shutdown. Railway rolling
+        # deploys overlap old and new containers briefly; if the old one
+        # deletes the webhook after the new one set it, Telegram has
+        # nowhere to deliver updates and the bot silently goes offline.
+        # Each container's startup overwrites the registered webhook, so
+        # leaving the old registration in place is safe.
         scheduler_task.cancel()
         with contextlib.suppress(asyncio.CancelledError):
             await scheduler_task
+        if healer_task is not None:
+            healer_task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await healer_task
         if http_task is not None and not http_task.done():
             http_task.cancel()
             with contextlib.suppress(asyncio.CancelledError):

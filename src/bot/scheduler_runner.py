@@ -226,6 +226,53 @@ async def _maybe_send_day_reminders(bot: Bot, settings: Settings) -> None:
         await session.commit()
 
 
+async def _maybe_reassert_webhook(bot: Bot, settings: Settings) -> None:
+    """Self-heal: if the webhook registration drifted away from our URL
+    (e.g., wiped by an overlapping deploy's shutdown), re-register it.
+
+    Cheap: one getWebhookInfo per tick + a setWebhook only when the URL
+    differs.
+    """
+    if not (settings.webhook_url and settings.webhook_secret):
+        return
+    expected = settings.webhook_url.strip().rstrip("/") + settings.webhook_path
+    try:
+        info = await bot.get_webhook_info()
+    except TelegramAPIError:
+        logger.warning("webhook_self_heal_info_failed")
+        return
+    if info.url == expected:
+        return
+    logger.warning(
+        "webhook_self_heal_reasserting",
+        current=info.url,
+        expected=expected,
+    )
+    try:
+        await bot.set_webhook(
+            url=expected,
+            secret_token=settings.webhook_secret,
+            drop_pending_updates=False,
+        )
+        logger.info("webhook_self_heal_done")
+    except TelegramAPIError:
+        logger.exception("webhook_self_heal_set_failed")
+
+
+async def run_webhook_healer(bot: Bot, settings: Settings) -> None:
+    """Tight loop (30s) that re-registers the webhook if Telegram lost it.
+
+    Separate from the 5-minute maintenance scheduler so we can recover
+    from a deploy-handover race in well under a minute.
+    """
+    while True:
+        try:
+            await _maybe_reassert_webhook(bot, settings)
+        except Exception:  # noqa: BLE001
+            logger.exception("webhook_healer_failed")
+        await asyncio.sleep(30)
+
+
 async def run_scheduler(bot: Bot, settings: Settings) -> None:
     """Run the maintenance loop until cancelled."""
     interval = settings.scheduler_interval_seconds
