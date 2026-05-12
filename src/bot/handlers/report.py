@@ -13,6 +13,7 @@ from __future__ import annotations
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
+import structlog
 from aiogram import Router
 from aiogram.filters import Command, CommandObject
 from aiogram.types import (
@@ -26,12 +27,15 @@ from aiogram.types import (
 from src.bot.strings import t
 from src.core.config import get_settings
 from src.core.db import get_session
+from src.core.db_metrics import count_queries
 from src.core.models import User
 from src.services.reports.pdf import build_report_pdf, pdf_filename
 from src.services.reports.png import build_report_png, png_filename
 from src.services.reports.service import get_report_data
 from src.services.reports.text import format_report_text
 from src.services.reports.xlsx import build_report_xlsx, xlsx_filename
+
+logger = structlog.get_logger()
 
 router = Router()
 
@@ -126,10 +130,15 @@ async def cmd_report(
         return
     tz = ZoneInfo(get_settings().timezone)
     today = datetime.now(tz=tz).date()
-    async for session in get_session():
-        data = await get_report_data(
-            session, user=db_user, tz=tz, today=today, months=months,
-        )
+    with count_queries() as q:
+        async for session in get_session():
+            data = await get_report_data(
+                session, user=db_user, tz=tz, today=today, months=months,
+            )
+    logger.info(
+        "report_query_count",
+        user_id=db_user.id, months=months, queries=q.count,
+    )
     await message.answer(
         format_report_text(data, db_user),
         reply_markup=_download_keyboard(months),
