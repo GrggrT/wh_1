@@ -36,7 +36,21 @@ _CB_RATE = "prof:rate"
 _CB_CUR = "prof:cur"
 _CB_RMD = "prof:rmd"
 _CB_RMD_SET = "prof:rmd:"  # prof:rmd:19, prof:rmd:off
+_CB_TZ = "prof:tz"
+_CB_TZ_SET = "prof:tz:"  # prof:tz:Europe/Warsaw etc.
+_CB_TZ_DEFAULT = "prof:tz_def"
 _CB_CLOSE = "prof:close"
+
+# Common IANA names shown as quick picks. Anything else is reachable via
+# the free-text prompt.
+_TZ_PRESETS: tuple[str, ...] = (
+    "Europe/Warsaw",
+    "Europe/Berlin",
+    "Europe/Moscow",
+    "Europe/Kyiv",
+    "Asia/Tashkent",
+    "Asia/Dubai",
+)
 
 _CURRENCY_RE = re.compile(r"^[A-Za-z]{3}$")
 _REMINDER_PRESETS: tuple[int, ...] = (18, 19, 20, 21)
@@ -53,9 +67,32 @@ def _profile_keyboard() -> InlineKeyboardMarkup:
                 InlineKeyboardButton(text=t("profile_btn_currency"), callback_data=_CB_CUR),
                 InlineKeyboardButton(text=t("profile_btn_reminder"), callback_data=_CB_RMD),
             ],
+            [
+                InlineKeyboardButton(text=t("profile_btn_timezone"), callback_data=_CB_TZ),
+            ],
             [InlineKeyboardButton(text=t("profile_btn_close"), callback_data=_CB_CLOSE)],
         ],
     )
+
+
+def _timezone_keyboard() -> InlineKeyboardMarkup:
+    rows: list[list[InlineKeyboardButton]] = []
+    btns = [
+        InlineKeyboardButton(text=tz, callback_data=f"{_CB_TZ_SET}{tz}")
+        for tz in _TZ_PRESETS
+    ]
+    # Two per row.
+    for i in range(0, len(btns), 2):
+        rows.append(btns[i : i + 2])
+    rows.append(
+        [
+            InlineKeyboardButton(
+                text=t("profile_timezone_btn_default"),
+                callback_data=_CB_TZ_DEFAULT,
+            ),
+        ],
+    )
+    return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
 def _reminder_keyboard() -> InlineKeyboardMarkup:
@@ -88,12 +125,14 @@ def _render_profile(user: User) -> str:
         reminder = t("profile_reminder_none")
     else:
         reminder = t("profile_reminder_at", hour=f"{user.remind_hour_local:02d}")
+    tz_value = user.timezone if user.timezone else t("profile_timezone_default")
     return t(
         "profile_header",
         name=user.name,
         rate=rate,
         currency=user.currency,
         reminder=reminder,
+        timezone=tz_value,
     )
 
 
@@ -289,6 +328,107 @@ async def cb_reminder_set(
         await query.message.answer(t("profile_reminder_saved", value=value))
         await query.message.answer(rendered, reply_markup=_profile_keyboard())
     await query.answer()
+
+
+# --- Timezone ------------------------------------------------------------
+
+
+@router.callback_query(F.data == _CB_TZ)
+async def cb_timezone(query: CallbackQuery, state: FSMContext) -> None:
+    await state.set_state(ProfileEdit.awaiting_timezone)
+    if isinstance(query.message, Message):
+        await query.message.answer(
+            t("profile_timezone_prompt"), reply_markup=_timezone_keyboard(),
+        )
+    await query.answer()
+
+
+def _is_valid_timezone(name: str) -> bool:
+    """Best-effort IANA name validation via ZoneInfo.
+
+    Importing ``ZoneInfo`` lazily keeps the cold-start small for the path
+    that never edits the tz field.
+    """
+    from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+
+    try:
+        ZoneInfo(name)
+    except (ZoneInfoNotFoundError, ValueError):
+        return False
+    return True
+
+
+@router.callback_query(F.data == _CB_TZ_DEFAULT)
+async def cb_timezone_default(
+    query: CallbackQuery, state: FSMContext, db_user: User | None = None,
+) -> None:
+    if db_user is None:
+        await query.answer()
+        return
+    async for session in get_session():
+        user = await _fetch_user(session, db_user.tg_id)
+        if user is None:
+            await query.answer()
+            return
+        user.timezone = None
+        await session.commit()
+        await session.refresh(user)
+        rendered = _render_profile(user)
+    await state.clear()
+    if isinstance(query.message, Message):
+        await query.message.answer(t("profile_timezone_cleared"))
+        await query.message.answer(rendered, reply_markup=_profile_keyboard())
+    await query.answer()
+
+
+@router.callback_query(F.data.startswith(_CB_TZ_SET))
+async def cb_timezone_set(
+    query: CallbackQuery, state: FSMContext, db_user: User | None = None,
+) -> None:
+    if db_user is None or query.data is None:
+        await query.answer()
+        return
+    tz_name = query.data[len(_CB_TZ_SET):]
+    if not _is_valid_timezone(tz_name):
+        await query.answer(t("profile_timezone_bad"), show_alert=True)
+        return
+    async for session in get_session():
+        user = await _fetch_user(session, db_user.tg_id)
+        if user is None:
+            await query.answer()
+            return
+        user.timezone = tz_name
+        await session.commit()
+        await session.refresh(user)
+        rendered = _render_profile(user)
+    await state.clear()
+    if isinstance(query.message, Message):
+        await query.message.answer(t("profile_timezone_saved", tz=tz_name))
+        await query.message.answer(rendered, reply_markup=_profile_keyboard())
+    await query.answer()
+
+
+@router.message(ProfileEdit.awaiting_timezone, F.text)
+async def msg_timezone(
+    message: Message, state: FSMContext, db_user: User | None = None,
+) -> None:
+    if db_user is None:
+        return
+    raw = (message.text or "").strip()
+    if not _is_valid_timezone(raw):
+        await message.answer(t("profile_timezone_bad"))
+        return
+    async for session in get_session():
+        user = await _fetch_user(session, db_user.tg_id)
+        if user is None:
+            return
+        user.timezone = raw
+        await session.commit()
+        await session.refresh(user)
+        rendered = _render_profile(user)
+    await state.clear()
+    await message.answer(t("profile_timezone_saved", tz=raw))
+    await message.answer(rendered, reply_markup=_profile_keyboard())
 
 
 @router.message(ProfileEdit(), Command("cancel"))

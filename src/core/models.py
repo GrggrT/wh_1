@@ -47,6 +47,9 @@ class User(Base):
     onboarded_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True,
     )
+    # Phase 7.7: per-user timezone (IANA name, e.g. "Europe/Warsaw"). NULL =
+    # fall back to the bot-wide setting.
+    timezone: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     sites: Mapped[list["Site"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     shifts: Mapped[list["Shift"]] = relationship(back_populates="user")

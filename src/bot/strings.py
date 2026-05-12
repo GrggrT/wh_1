@@ -651,7 +651,8 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
             "Имя: {name}\n"
             "Ставка: {rate}\n"
             "Валюта: {currency}\n"
-            "Напоминание: {reminder}"
+            "Напоминание: {reminder}\n"
+            "Часовой пояс: {timezone}"
         ),
         "profile_rate_none": "не задана",
         "profile_reminder_none": "выключено",
@@ -660,6 +661,7 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
         "profile_btn_rate": "💰 Ставка",
         "profile_btn_currency": "💱 Валюта",
         "profile_btn_reminder": "⏰ Напоминание",
+        "profile_btn_timezone": "🌐 Часовой пояс",
         "profile_btn_close": "Закрыть",
         "profile_name_prompt": "Пришли новое имя. /cancel — отмена.",
         "profile_name_bad": "Имя пустое. Пришли текстом или /cancel.",
@@ -684,6 +686,17 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
         ),
         "profile_reminder_btn_off": "Не нужно",
         "profile_reminder_saved": "Напоминание: {value}.",
+        "profile_timezone_default": "по умолчанию",
+        "profile_timezone_prompt": (
+            "Выбери часовой пояс из списка или пришли IANA-имя "
+            "(например: Europe/Warsaw). /cancel — отмена."
+        ),
+        "profile_timezone_btn_default": "Использовать по умолчанию",
+        "profile_timezone_bad": (
+            "Неизвестный часовой пояс. Пример: Europe/Warsaw."
+        ),
+        "profile_timezone_saved": "Часовой пояс: {tz}.",
+        "profile_timezone_cleared": "Часовой пояс сброшен на значение по умолчанию.",
         "profile_closed": "Закрыто.",
         # Phase 5.5 — cutover
         "feature_disabled": (

@@ -34,3 +34,4 @@ class ProfileEdit(StatesGroup):
     awaiting_rate = State()
     awaiting_currency = State()
     awaiting_remind_hour = State()
+    awaiting_timezone = State()
