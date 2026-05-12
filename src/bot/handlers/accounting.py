@@ -67,11 +67,12 @@ def _current_year_month(tz: ZoneInfo) -> tuple[int, int]:
 def _rate_for_user(user: User) -> str:
     if user.hourly_rate is None:
         return "—"
-    return f"{user.hourly_rate:.2f} PLN/ч"
+    return f"{user.hourly_rate:.2f} {user.currency}/ч"
 
 
 def format_period(ledger: PeriodLedger, user: User) -> str:
     """Format a PeriodLedger as a multi-line user-facing report."""
+    cur = user.currency
     lines: list[str] = [
         t("period_header", month=_ru_month(ledger.month), year=ledger.year),
     ]
@@ -88,7 +89,9 @@ def format_period(ledger: PeriodLedger, user: User) -> str:
     if ledger.earnings is None:
         lines.append(t("period_earnings_unpriced"))
     else:
-        lines.append(t("period_earnings", earnings=_fmt_money(ledger.earnings)))
+        lines.append(
+            t("period_earnings", earnings=_fmt_money(ledger.earnings), currency=cur),
+        )
 
     # Advances list.
     if ledger.advances:
@@ -97,6 +100,7 @@ def format_period(ledger: PeriodLedger, user: User) -> str:
             t(
                 "period_advances_header",
                 total=_fmt_money(ledger.advances_total),
+                currency=cur,
             ),
         )
         for a in ledger.advances:
@@ -106,6 +110,7 @@ def format_period(ledger: PeriodLedger, user: User) -> str:
                     date=a.day.isoformat(),
                     amount=_fmt_money(a.amount),
                     note=a.note or "—",
+                    currency=cur,
                 ),
             )
     else:
@@ -119,6 +124,7 @@ def format_period(ledger: PeriodLedger, user: User) -> str:
             t(
                 "period_payments_header",
                 total=_fmt_money(ledger.payments_total),
+                currency=cur,
             ),
         )
         for p in ledger.payments:
@@ -130,6 +136,7 @@ def format_period(ledger: PeriodLedger, user: User) -> str:
                         amount=_fmt_money(p.amount),
                         paid_month=_ru_month(p.paid_on.month),
                         paid_year=p.paid_on.year,
+                        currency=cur,
                     ),
                 )
             else:
@@ -139,6 +146,7 @@ def format_period(ledger: PeriodLedger, user: User) -> str:
                         date=p.paid_on.isoformat(),
                         amount=_fmt_money(p.amount),
                         note=p.note or "—",
+                        currency=cur,
                     ),
                 )
     else:
@@ -147,10 +155,14 @@ def format_period(ledger: PeriodLedger, user: User) -> str:
 
     # Summary.
     lines.append("")
-    lines.append(t("period_received", received=_fmt_money(ledger.received_total)))
+    lines.append(
+        t("period_received", received=_fmt_money(ledger.received_total), currency=cur),
+    )
     remaining = ledger.remaining
     if remaining is not None:
-        lines.append(t("period_remaining", remaining=_fmt_money(remaining)))
+        lines.append(
+            t("period_remaining", remaining=_fmt_money(remaining), currency=cur),
+        )
 
     status = ledger.status
     if status == "pending":
@@ -161,7 +173,9 @@ def format_period(ledger: PeriodLedger, user: User) -> str:
         lines.append(t("period_status_settled"))
     elif status == "overpaid":
         assert remaining is not None
-        lines.append(t("period_status_overpaid", overpaid=_fmt_money(-remaining)))
+        lines.append(
+            t("period_status_overpaid", overpaid=_fmt_money(-remaining), currency=cur),
+        )
     else:  # unpriced
         lines.append(t("period_status_unpriced"))
 
@@ -169,7 +183,7 @@ def format_period(ledger: PeriodLedger, user: User) -> str:
 
 
 def format_cashflow(
-    entries: list[CashflowEntry], year: int, month: int,
+    entries: list[CashflowEntry], year: int, month: int, currency: str,
 ) -> str:
     if not entries:
         return t("cash_empty")
@@ -180,6 +194,7 @@ def format_cashflow(
             month=_ru_month(month),
             year=year,
             total=_fmt_money(total),
+            currency=currency,
         ),
     ]
     for e in entries:
@@ -192,12 +207,13 @@ def format_cashflow(
                 amount=_fmt_money(e.amount),
                 period=period,
                 note=e.note or "—",
+                currency=currency,
             ),
         )
     return "\n".join(lines)
 
 
-def format_owed(ledgers: list[PeriodLedger]) -> str:
+def format_owed(ledgers: list[PeriodLedger], currency: str) -> str:
     if not ledgers:
         return t("owed_empty")
     lines: list[str] = [t("owed_header")]
@@ -209,7 +225,12 @@ def format_owed(ledgers: list[PeriodLedger]) -> str:
         period = _period_label(led.year, led.month)
         if led.status == "pending":
             lines.append(
-                t("owed_row_pending", period=period, remaining=_fmt_money(remaining)),
+                t(
+                    "owed_row_pending",
+                    period=period,
+                    remaining=_fmt_money(remaining),
+                    currency=currency,
+                ),
             )
         else:  # partial
             lines.append(
@@ -219,10 +240,17 @@ def format_owed(ledgers: list[PeriodLedger]) -> str:
                     received=_fmt_money(led.received_total),
                     earnings=_fmt_money(led.earnings),
                     remaining=_fmt_money(remaining),
+                    currency=currency,
                 ),
             )
     lines.append("")
-    lines.append(t("owed_total", total=_fmt_money(total.quantize(Decimal("0.01")))))
+    lines.append(
+        t(
+            "owed_total",
+            total=_fmt_money(total.quantize(Decimal("0.01"))),
+            currency=currency,
+        ),
+    )
     return "\n".join(lines)
 
 
@@ -270,7 +298,7 @@ async def cmd_cash(
         entries = await list_cashflow(
             session, user=db_user, start=first_day, end=last_day,
         )
-    await message.answer(format_cashflow(entries, year, month))
+    await message.answer(format_cashflow(entries, year, month, db_user.currency))
 
 
 @router.message(Command("owed"))
@@ -284,4 +312,4 @@ async def cmd_owed(message: Message, db_user: User | None = None) -> None:
         ledgers = await list_open_periods(
             session, user=db_user, tz=tz, today=today,
         )
-    await message.answer(format_owed(ledgers))
+    await message.answer(format_owed(ledgers, db_user.currency))

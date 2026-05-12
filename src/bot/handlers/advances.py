@@ -120,6 +120,7 @@ async def cmd_advance(
             amount=_fmt_money(amount),
             date=advance_day_iso,
             note=note or "—",
+            currency=db_user.currency,
         ),
     )
 
@@ -152,6 +153,7 @@ async def cmd_my_advances(
     if not rows:
         await message.answer(t("advances_empty"))
         return
+    cur = db_user.currency
     lines = [t("advances_header", year=year, month=f"{month:02d}")]
     total = Decimal(0)
     for a in rows:
@@ -162,9 +164,10 @@ async def cmd_my_advances(
                 date=a.day.isoformat(),
                 amount=_fmt_money(a.amount),
                 note=a.note or "—",
+                currency=cur,
             ),
         )
-    lines.append(t("advances_total", total=_fmt_money(total)))
+    lines.append(t("advances_total", total=_fmt_money(total), currency=cur))
     await message.answer("\n".join(lines))
 
 
@@ -224,12 +227,15 @@ async def cmd_crew_advances(
                 name=names.get(uid, f"id={uid}"),
                 total=_fmt_money(sub_total),
                 n=len(advs),
+                currency=db_user.currency,
             ),
         )
     if not any_rows:
         await message.answer(t("advances_empty"))
         return
-    lines.append(t("advances_total", total=_fmt_money(crew_total)))
+    lines.append(
+        t("advances_total", total=_fmt_money(crew_total), currency=db_user.currency),
+    )
     await message.answer("\n".join(lines))
 
 
@@ -309,12 +315,14 @@ async def cmd_crew_salary(
                 hours=format_hours(b.total_hours),
                 advances=_fmt_money(b.advances_total),
                 net=_fmt_money(b.net_payable),
+                currency=m.currency,
             ),
         )
     lines.append(
         t(
             "crew_salary_total",
             total=_fmt_money(grand_total) if grand_priced else "—",
+            currency=db_user.currency,
         ),
     )
     await message.answer("\n".join(lines))

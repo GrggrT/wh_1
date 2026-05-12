@@ -54,7 +54,11 @@ async def cmd_whoami(message: Message, db_user: User | None = None) -> None:
             ).scalar_one_or_none()
             if crew is not None:
                 crew_name = crew.name
-    rate = "—" if db_user.hourly_rate is None else f"{db_user.hourly_rate} zł/ч"
+    rate = (
+        "—"
+        if db_user.hourly_rate is None
+        else f"{db_user.hourly_rate} {db_user.currency}/ч"
+    )
     await message.answer(
         t(
             "whoami",

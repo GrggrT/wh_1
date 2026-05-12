@@ -112,24 +112,33 @@ async def start_wizard(
 
 
 @router.callback_query(Onboarding.awaiting_name, F.data == _CB_NAME_USE_TG)
-async def cb_name_use_tg(query: CallbackQuery, state: FSMContext) -> None:
+async def cb_name_use_tg(
+    query: CallbackQuery, state: FSMContext, db_user: User | None = None,
+) -> None:
     data = await state.get_data()
     tg_name = str(data.get("tg_name") or "")
-    await _accept_name(query, state, tg_name)
+    currency = db_user.currency if db_user else "PLN"
+    await _accept_name(query, state, tg_name, currency=currency)
     await query.answer()
 
 
 @router.message(Onboarding.awaiting_name, F.text)
-async def msg_name(message: Message, state: FSMContext) -> None:
+async def msg_name(
+    message: Message, state: FSMContext, db_user: User | None = None,
+) -> None:
     raw = (message.text or "").strip()
     if not raw:
         await message.answer(t("onb_name_bad"))
         return
-    await _accept_name(message, state, raw)
+    currency = db_user.currency if db_user else "PLN"
+    await _accept_name(message, state, raw, currency=currency)
 
 
 async def _accept_name(
-    source: Message | CallbackQuery, state: FSMContext, name: str,
+    source: Message | CallbackQuery,
+    state: FSMContext,
+    name: str,
+    currency: str = "PLN",
 ) -> None:
     await state.update_data(name=name)
     await state.set_state(Onboarding.awaiting_rate)
@@ -137,7 +146,9 @@ async def _accept_name(
     if target is None:
         return
     await target.answer(t("onb_name_saved", name=name))
-    await target.answer(t("onb_rate_prompt"), reply_markup=_rate_keyboard())
+    await target.answer(
+        t("onb_rate_prompt", currency=currency), reply_markup=_rate_keyboard(),
+    )
 
 
 @router.callback_query(Onboarding.awaiting_rate, F.data == _CB_RATE_SKIP)
@@ -155,13 +166,16 @@ async def cb_rate_skip(query: CallbackQuery, state: FSMContext) -> None:
 
 
 @router.message(Onboarding.awaiting_rate, F.text)
-async def msg_rate(message: Message, state: FSMContext) -> None:
+async def msg_rate(
+    message: Message, state: FSMContext, db_user: User | None = None,
+) -> None:
     rate = parse_rate(message.text or "")
     if rate is None:
         await message.answer(t("onb_rate_bad"))
         return
     await state.update_data(rate=str(rate))
-    await message.answer(t("onb_rate_saved", rate=str(rate)))
+    currency = db_user.currency if db_user else "PLN"
+    await message.answer(t("onb_rate_saved", rate=str(rate), currency=currency))
     await state.set_state(Onboarding.awaiting_reminder)
     await message.answer(
         t("onb_reminder_prompt"), reply_markup=_reminder_keyboard(),

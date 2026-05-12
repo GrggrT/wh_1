@@ -40,11 +40,12 @@ def test_simple_menu_default_worker_has_only_core_buttons() -> None:
     assert not any("бригад" in label.lower() for label in labels)
 
 
-def test_simple_menu_legacy_adds_shift_buttons() -> None:
+def test_simple_menu_legacy_toggle_does_not_add_shift_buttons() -> None:
+    """Phase 6.9: legacy shift buttons are permanently removed from simple_menu."""
     markup = simple_menu(_snap(legacy=True), role="worker")
     labels = _labels(markup)
-    assert any("Начать смену" in label for label in labels)
-    assert any("Закончить смену" in label for label in labels)
+    assert not any("Начать смену" in label for label in labels)
+    assert not any("Закончить смену" in label for label in labels)
 
 
 def test_simple_menu_foreman_with_crews_adds_crew_buttons() -> None:
@@ -60,8 +61,8 @@ def test_simple_menu_worker_does_not_get_crew_buttons_even_when_enabled() -> Non
     assert not any("Бригада сегодня" in label for label in labels)
 
 
-def test_simple_menu_owner_with_legacy_and_crews_has_everything() -> None:
-    markup = simple_menu(_snap(legacy=True, crews=True), role="owner")
+def test_simple_menu_owner_with_crews_has_crew_row() -> None:
+    markup = simple_menu(_snap(crews=True), role="owner")
     labels = _labels(markup)
-    assert any("Начать смену" in label for label in labels)
     assert any("Бригада сегодня" in label for label in labels)
+    assert not any("Начать смену" in label for label in labels)

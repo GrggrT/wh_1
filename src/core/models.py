@@ -30,6 +30,7 @@ class User(Base):
     name: Mapped[str] = mapped_column(Text, nullable=False)
     locale: Mapped[str] = mapped_column(Text, nullable=False, server_default="ru")
     hourly_rate: Mapped[Decimal | None] = mapped_column(Numeric(10, 2))
+    currency: Mapped[str] = mapped_column(Text, nullable=False, server_default="PLN")
     role: Mapped[str] = mapped_column(Text, nullable=False, server_default="worker")
     crew_id: Mapped[int | None] = mapped_column(
         BigInteger, ForeignKey("crews.id", ondelete="SET NULL"),

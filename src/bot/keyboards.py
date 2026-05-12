@@ -54,13 +54,6 @@ def simple_menu(
             KeyboardButton(text=t("menu_btn_my_days")),
         ],
     ]
-    if snap.legacy_clock_inout_enabled:
-        rows.append(
-            [
-                KeyboardButton(text=f"\U0001f7e2 {t('start_shift_btn')}"),
-                KeyboardButton(text=f"\U0001f534 {t('stop_shift_btn')}"),
-            ],
-        )
     if role in ("foreman", "owner") and snap.crews_enabled:
         rows.append(
             [

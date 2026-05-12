@@ -66,6 +66,7 @@ async def cmd_set_rate(
         await message.answer(t("rate_invalid"))
         return
     target_name = ""
+    target_currency = db_user.currency
     notify_tg_id: int | None = None
     async for session in get_session():
         target = (
@@ -82,6 +83,7 @@ async def cmd_set_rate(
         old_rate = str(target.hourly_rate) if target.hourly_rate is not None else None
         target.hourly_rate = rate
         target_name = target.name
+        target_currency = target.currency
         if target.id != db_user.id:
             notify_tg_id = target.tg_id
         await write_audit(
@@ -89,11 +91,18 @@ async def cmd_set_rate(
             {"hourly_rate": {"before": old_rate, "after": str(rate)}},
         )
         await session.commit()
-    await message.answer(t("rate_set", name=target_name, rate=str(rate)))
+    await message.answer(
+        t("rate_set", name=target_name, rate=str(rate), currency=target_currency),
+    )
     if notify_tg_id is not None and message.bot is not None:
         with contextlib.suppress(TelegramAPIError):
             await message.bot.send_message(
-                notify_tg_id, t("rate_changed_notify", rate=str(rate)),
+                notify_tg_id,
+                t(
+                    "rate_changed_notify",
+                    rate=str(rate),
+                    currency=target_currency,
+                ),
             )
 
 
@@ -104,7 +113,9 @@ async def cmd_my_rate(message: Message, db_user: User | None = None) -> None:
     if db_user.hourly_rate is None:
         await message.answer(t("rate_not_set"))
     else:
-        await message.answer(t("my_rate", rate=str(db_user.hourly_rate)))
+        await message.answer(
+            t("my_rate", rate=str(db_user.hourly_rate), currency=db_user.currency),
+        )
 
 
 # --- SITES ---
@@ -209,7 +220,7 @@ async def cmd_set_site_rate(
         )
         await session.commit()
     await message.answer(
-        t("site_rate_set", name=site_name, rate=str(rate)),
+        t("site_rate_set", name=site_name, rate=str(rate), currency=db_user.currency),
     )
 
 
@@ -384,14 +395,23 @@ async def cmd_set_crew_rate(
         notify_tg_ids = [m.tg_id for m in members_using_default if m.id != db_user.id]
         await session.commit()
     await message.answer(
-        t("crew_rate_set", crew=crew_name, rate=str(rate)),
+        t(
+            "crew_rate_set",
+            crew=crew_name,
+            rate=str(rate),
+            currency=db_user.currency,
+        ),
     )
     if notify_tg_ids and message.bot is not None:
         for tg_id in notify_tg_ids:
             with contextlib.suppress(TelegramAPIError):
                 await message.bot.send_message(
                     tg_id,
-                    t("crew_rate_changed_notify", rate=str(rate)),
+                    t(
+                        "crew_rate_changed_notify",
+                        rate=str(rate),
+                        currency=db_user.currency,
+                    ),
                 )
 
 

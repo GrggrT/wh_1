@@ -189,7 +189,7 @@ async def _build_month_keyboard(
 
 
 async def _build_day_view(
-    session: AsyncSession, *, user_id: int, day: date,
+    session: AsyncSession, *, user_id: int, day: date, currency: str,
 ) -> tuple[str, InlineKeyboardMarkup]:
     """Compose the per-day text + actions inline keyboard."""
     entry = await get_day_entry(session, user_id=user_id, day=day)
@@ -206,12 +206,22 @@ async def _build_day_view(
     if advs:
         total_a = sum((a.amount for a in advs), Decimal(0))
         lines.append(
-            t("cal_day_advances", n=len(advs), total=f"{total_a:.2f}"),
+            t(
+                "cal_day_advances",
+                n=len(advs),
+                total=f"{total_a:.2f}",
+                currency=currency,
+            ),
         )
     if pays:
         total_p = sum((p.amount for p in pays), Decimal(0))
         lines.append(
-            t("cal_day_payments", n=len(pays), total=f"{total_p:.2f}"),
+            t(
+                "cal_day_payments",
+                n=len(pays),
+                total=f"{total_p:.2f}",
+                currency=currency,
+            ),
         )
         for p in pays:
             lines.append(
@@ -219,6 +229,7 @@ async def _build_day_view(
                     "cal_day_payment_row",
                     amount=f"{p.amount:.2f}",
                     period=f"{p.period_year}-{p.period_month:02d}",
+                    currency=currency,
                 ),
             )
 
@@ -358,7 +369,9 @@ async def cb_day(query: CallbackQuery, db_user: User | None = None) -> None:
         await query.answer()
         return
     async for session in get_session():
-        body, kb = await _build_day_view(session, user_id=db_user.id, day=day)
+        body, kb = await _build_day_view(
+            session, user_id=db_user.id, day=day, currency=db_user.currency,
+        )
     if isinstance(query.message, Message):
         with contextlib.suppress(Exception):
             await query.message.edit_text(body, reply_markup=kb)
@@ -409,7 +422,9 @@ async def cb_set_hours(
             session, user_id=db_user.id, day=day, hours=hours,
         )
         await session.commit()
-        body, kb = await _build_day_view(session, user_id=db_user.id, day=day)
+        body, kb = await _build_day_view(
+            session, user_id=db_user.id, day=day, currency=db_user.currency,
+        )
     if isinstance(query.message, Message):
         with contextlib.suppress(Exception):
             await query.message.edit_text(body, reply_markup=kb)
@@ -437,7 +452,11 @@ async def cb_advance_start(
     await state.update_data(day=day.isoformat())
     if isinstance(query.message, Message):
         await query.message.answer(
-            t("cal_advance_prompt", date=day.isoformat()),
+            t(
+                "cal_advance_prompt",
+                date=day.isoformat(),
+                currency=db_user.currency,
+            ),
         )
     await query.answer()
 
@@ -470,13 +489,16 @@ async def msg_advance_amount(
             note=None,
         )
         await session.commit()
-        body, kb = await _build_day_view(session, user_id=db_user.id, day=day)
+        body, kb = await _build_day_view(
+            session, user_id=db_user.id, day=day, currency=db_user.currency,
+        )
     await state.clear()
     await message.answer(
         t(
             "cal_advance_recorded",
             amount=f"{amount:.2f}",
             date=day.isoformat(),
+            currency=db_user.currency,
         ),
     )
     await message.answer(body, reply_markup=kb)
@@ -537,6 +559,7 @@ async def cb_pay_period(
                 "cal_pay_amount_prompt",
                 date=day.isoformat(),
                 period=f"{year}-{month:02d}",
+                currency=db_user.currency,
             ),
         )
     await query.answer()
@@ -573,7 +596,9 @@ async def msg_pay_amount(
             recorded_by_id=db_user.id,
         )
         await session.commit()
-        body, kb = await _build_day_view(session, user_id=db_user.id, day=day)
+        body, kb = await _build_day_view(
+            session, user_id=db_user.id, day=day, currency=db_user.currency,
+        )
     await state.clear()
     await message.answer(
         t(
@@ -581,6 +606,7 @@ async def msg_pay_amount(
             amount=f"{amount:.2f}",
             date=day.isoformat(),
             period=f"{year}-{month:02d}",
+            currency=db_user.currency,
         ),
     )
     await message.answer(body, reply_markup=kb)

@@ -232,14 +232,14 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
         ),
         "set_rate_usage": "Используй: /set_rate <tg_id> <ставка>",
         "rate_invalid": "Ставка должна быть неотрицательным числом.",
-        "rate_set": "Ставка для {name} установлена: {rate} zł/ч.",
-        "rate_changed_notify": "Твоя ставка обновлена: {rate} zł/ч.",
+        "rate_set": "Ставка для {name} установлена: {rate} {currency}/ч.",
+        "rate_changed_notify": "Твоя ставка обновлена: {rate} {currency}/ч.",
         "crew_rate_changed_notify": (
-            "Ставка бригады по умолчанию обновлена: {rate} zł/ч. "
+            "Ставка бригады по умолчанию обновлена: {rate} {currency}/ч. "
             "Если у тебя нет личной ставки — теперь будет применяться эта."
         ),
         "rate_not_set": "У тебя не задана ставка. Попроси бригадира — /set_rate.",
-        "my_rate": "Твоя ставка: {rate} zł/ч.",
+        "my_rate": "Твоя ставка: {rate} {currency}/ч.",
         "sites_empty": "Объектов пока нет. Создай первый при старте смены.",
         "sites_list": "Объекты:\n{body}",
         "site_not_found": "Объект не найден или не принадлежит тебе.",
@@ -318,7 +318,7 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
         "audit_list": "История смены #{id}:\n{body}",
         "set_crew_rate_usage": "Используй: /set_crew_rate <ставка>",
         "crew_rate_set": (
-            "Ставка по умолчанию для бригады «{crew}»: {rate} zł/ч. "
+            "Ставка по умолчанию для бригады «{crew}»: {rate} {currency}/ч. "
             "Применяется к новым работникам без своей ставки."
         ),
         "shift_info_usage": "Используй: /shift_info <id>",
@@ -395,32 +395,32 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
             "Например: /advance 123456789 500 Аванс на материалы"
         ),
         "advance_bad_amount": (
-            "Сумма должна быть положительным числом (PLN). Пример: 500 или 500.50"
+            "Сумма должна быть положительным числом. Пример: 500 или 500.50"
         ),
         "advance_recorded": (
             "✅ Аванс зафиксирован.\n"
             "Работник: {name}\n"
-            "Сумма: {amount} PLN\n"
+            "Сумма: {amount} {currency}\n"
             "Дата: {date}\n"
             "Комментарий: {note}"
         ),
         "advances_empty": "Авансов за период нет.",
         "advances_header": "Авансы за {year}-{month}:",
-        "advance_row": "{date}: {amount} PLN — {note}",
-        "advances_total": "Итого авансов: {total} PLN",
+        "advance_row": "{date}: {amount} {currency} — {note}",
+        "advances_total": "Итого авансов: {total} {currency}",
         "crew_advances_header": "Авансы бригады за {year}-{month}:",
-        "crew_advances_member": "{name}: {total} PLN ({n} шт)",
+        "crew_advances_member": "{name}: {total} {currency} ({n} шт)",
         "month_format": "Неверный формат месяца. Используй YYYY-MM, например 2026-05.",
         "salary_header": "Расчёт за {year}-{month}:",
         "salary_hours": "Часы: {h}",
-        "salary_earnings": "Начислено: {earnings} PLN",
-        "salary_advances": "Авансы: {advances} PLN",
-        "salary_net": "К выплате: {net} PLN",
+        "salary_earnings": "Начислено: {earnings} {currency}",
+        "salary_advances": "Авансы: {advances} {currency}",
+        "salary_net": "К выплате: {net} {currency}",
         "crew_salary_header": "Зарплата бригады за {year}-{month}:",
         "crew_salary_row": (
-            "{name}: {hours} ч, авансы {advances} PLN → к выплате {net} PLN"
+            "{name}: {hours} ч, авансы {advances} {currency} → к выплате {net} {currency}"
         ),
-        "crew_salary_total": "Итого к выплате: {total} PLN",
+        "crew_salary_total": "Итого к выплате: {total} {currency}",
         "crew_salary_empty": "За этот месяц нет ни часов, ни авансов.",
         "user_not_found": "Пользователь не найден.",
         # Phase 5.3 — evening reminders
@@ -461,7 +461,7 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
         "onb_name_bad": "Имя пустое. Пришли текстом или жми кнопку ниже.",
         "onb_name_saved": "Имя: {name}",
         "onb_rate_prompt": (
-            "Какая у тебя ставка за час в PLN? "
+            "Какая у тебя ставка за час в {currency}? "
             "Например: 35 или 42.5\n"
             "Если не знаешь — жми «Пропустить», настроим позже через /set_rate."
         ),
@@ -469,7 +469,7 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
         "onb_rate_bad": (
             "Не понял сумму. Пример: 35 или 42.5. Или жми «Пропустить»."
         ),
-        "onb_rate_saved": "Ставка: {rate} PLN/ч",
+        "onb_rate_saved": "Ставка: {rate} {currency}/ч",
         "onb_rate_skipped": "Ставку пропустили.",
         "onb_reminder_prompt": (
             "Хочешь, я буду напоминать вечером поставить часы?"
@@ -504,9 +504,9 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
         "cal_day_no_entry": "Часы: не указаны",
         "cal_day_off_line": "🌴 Выходной",
         "cal_day_hours": "Часы: {hours}",
-        "cal_day_advances": "💵 Авансов: {n} на сумму {total} PLN",
-        "cal_day_payments": "💰 Выплат: {n} на сумму {total} PLN",
-        "cal_day_payment_row": "  · {amount} PLN за период {period}",
+        "cal_day_advances": "💵 Авансов: {n} на сумму {total} {currency}",
+        "cal_day_payments": "💰 Выплат: {n} на сумму {total} {currency}",
+        "cal_day_payment_row": "  · {amount} {currency} за период {period}",
         "cal_btn_set_hours": "🕒 Поставить часы",
         "cal_btn_dayoff": "🌴 Отметить выходной",
         "cal_btn_advance": "💵 Записать аванс",
@@ -515,56 +515,96 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
         "cal_btn_back_to_day": "◀ К дню",
         "cal_pick_hours": "Выбери часы за {date}:",
         "cal_advance_prompt": (
-            "Введи сумму аванса за {date} (PLN). "
+            "Введи сумму аванса за {date} ({currency}). "
             "Например: 200 или 350.50. /cancel — отмена."
         ),
-        "cal_advance_recorded": "✅ Аванс {amount} PLN за {date} записан.",
+        "cal_advance_recorded": "✅ Аванс {amount} {currency} за {date} записан.",
         "cal_pay_pick_period": (
             "💰 Выплата зарплаты {date}.\n"
             "За какой период? (зарплата за апрель может быть выплачена в мае)"
         ),
         "cal_per_btn": "За {month} {year}",
         "cal_pay_amount_prompt": (
-            "Введи сумму выплаты за {period} (выплачено {date}, PLN). "
+            "Введи сумму выплаты за {period} (выплачено {date}, {currency}). "
             "/cancel — отмена."
         ),
         "cal_pay_recorded": (
-            "✅ Выплата {amount} PLN зачтена за {period} (выплачено {date})."
+            "✅ Выплата {amount} {currency} зачтена за {period} (выплачено {date})."
         ),
         # Phase 6.7 — period / cashflow / owed accounting
         "period_header": "📊 Период {month} {year}",
         "period_hours_rate": "Часы: {hours}  ·  Ставка: {rate}",
         "period_no_rate": "Часы: {hours}  ·  Ставка: не задана",
-        "period_earnings": "Начислено: {earnings} PLN",
+        "period_earnings": "Начислено: {earnings} {currency}",
         "period_earnings_unpriced": "Начислено: — (нет ставки)",
-        "period_advances_header": "💵 Авансы (внутри периода): {total} PLN",
-        "period_advance_row": "  · {date}: {amount} PLN — {note}",
-        "period_payments_header": "💰 Выплаты за этот период: {total} PLN",
-        "period_payment_row": "  · {date}: {amount} PLN — {note}",
+        "period_advances_header": "💵 Авансы (внутри периода): {total} {currency}",
+        "period_advance_row": "  · {date}: {amount} {currency} — {note}",
+        "period_payments_header": "💰 Выплаты за этот период: {total} {currency}",
+        "period_payment_row": "  · {date}: {amount} {currency} — {note}",
         "period_payment_row_late": (
-            "  · {date}: {amount} PLN ← выплачено в {paid_month} {paid_year}"
+            "  · {date}: {amount} {currency} ← выплачено в {paid_month} {paid_year}"
         ),
         "period_no_advances": "💵 Авансов нет.",
         "period_no_payments": "💰 Выплат нет.",
-        "period_received": "Получено: {received} PLN",
-        "period_remaining": "Осталось: {remaining} PLN",
+        "period_received": "Получено: {received} {currency}",
+        "period_remaining": "Осталось: {remaining} {currency}",
         "period_status_pending": "Статус: 🔴 не выплачено",
         "period_status_partial": "Статус: 🟡 частично",
         "period_status_settled": "Статус: 🟢 рассчитано",
-        "period_status_overpaid": "Статус: 🔵 переплата {overpaid} PLN",
+        "period_status_overpaid": "Статус: 🔵 переплата {overpaid} {currency}",
         "period_status_unpriced": "Статус: ⚪ нет ставки",
-        "cash_header": "💸 Денежный поток {month} {year}: всего {total} PLN",
+        "cash_header": "💸 Денежный поток {month} {year}: всего {total} {currency}",
         "cash_empty": "В этом месяце выплат и авансов не было.",
-        "cash_row_advance": "{date} 💵 аванс {amount} PLN (за {period}) — {note}",
-        "cash_row_payment": "{date} 💰 выплата {amount} PLN (за {period}) — {note}",
+        "cash_row_advance": "{date} 💵 аванс {amount} {currency} (за {period}) — {note}",
+        "cash_row_payment": "{date} 💰 выплата {amount} {currency} (за {period}) — {note}",
         "owed_header": "📋 Незакрытые периоды:",
         "owed_empty": "Все периоды рассчитаны 🟢",
-        "owed_row_pending": "🔴 {period}: ничего не получено, должно {remaining} PLN",
+        "owed_row_pending": "🔴 {period}: ничего не получено, должно {remaining} {currency}",
         "owed_row_partial": (
             "🟡 {period}: получено {received} из {earnings}, "
-            "осталось {remaining} PLN"
+            "осталось {remaining} {currency}"
         ),
-        "owed_total": "Итого долг: {total} PLN",
+        "owed_total": "Итого долг: {total} {currency}",
+        # Phase 6.9 — /profile editor
+        "profile_header": (
+            "⚙ Профиль\n"
+            "Имя: {name}\n"
+            "Ставка: {rate}\n"
+            "Валюта: {currency}\n"
+            "Напоминание: {reminder}"
+        ),
+        "profile_rate_none": "не задана",
+        "profile_reminder_none": "выключено",
+        "profile_reminder_at": "{hour}:00",
+        "profile_btn_name": "✏ Имя",
+        "profile_btn_rate": "💰 Ставка",
+        "profile_btn_currency": "💱 Валюта",
+        "profile_btn_reminder": "⏰ Напоминание",
+        "profile_btn_close": "Закрыть",
+        "profile_name_prompt": "Пришли новое имя. /cancel — отмена.",
+        "profile_name_bad": "Имя пустое. Пришли текстом или /cancel.",
+        "profile_name_saved": "Имя обновлено: {name}.",
+        "profile_rate_prompt": (
+            "Пришли новую ставку за час в {currency}. Например: 35 или 42.5\n"
+            "Чтобы убрать ставку — пришли «-». /cancel — отмена."
+        ),
+        "profile_rate_bad": "Не понял сумму. Пример: 35 или 42.5, или «-».",
+        "profile_rate_saved": "Ставка обновлена: {rate} {currency}/ч.",
+        "profile_rate_cleared": "Ставка убрана.",
+        "profile_currency_prompt": (
+            "Пришли код валюты (3 буквы), например: PLN, USD, EUR, RUB, BYN, UAH.\n"
+            "/cancel — отмена."
+        ),
+        "profile_currency_bad": (
+            "Код валюты должен быть из 3 латинских букв (например, PLN). Попробуй ещё."
+        ),
+        "profile_currency_saved": "Валюта обновлена: {currency}.",
+        "profile_reminder_prompt": (
+            "Когда напоминать поставить часы?"
+        ),
+        "profile_reminder_btn_off": "Не нужно",
+        "profile_reminder_saved": "Напоминание: {value}.",
+        "profile_closed": "Закрыто.",
         # Phase 5.5 — cutover
         "feature_disabled": (
             "Эта функция выключена. Владелец может включить её в /settings."
@@ -577,8 +617,8 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
             "/cash [YYYY-MM] — денежный поток за месяц\n"
             "/owed — что ещё не выплачено\n"
             "/my_days — мои последние 14 дней\n"
+            "/profile — имя, ставка, валюта, напоминание\n"
             "/my_rate — моя ставка\n"
-            "/set_rate <tg_id> <ставка> — изменить ставку\n"
             "/remind_on HH — вечернее напоминание\n"
             "/remind_off — отключить напоминание\n"
             "/whoami — кто я\n"
