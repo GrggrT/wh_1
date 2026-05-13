@@ -51,10 +51,14 @@ async def prune_expired(
 async def _prune_share_tokens(
     session: AsyncSession, *, moment: datetime,
 ) -> int:
+    # SQLAlchemy 2.x stubs vary: older versions type execute(delete()) as
+    # CursorResult (with .rowcount); newer versions narrow to Result[Any].
+    # Dual ignore so the code compiles cleanly under both — `unused-ignore`
+    # silences the warning when `attr-defined` does not actually fire.
     result = await session.execute(
         delete(ShareToken).where(ShareToken.expires_at < moment),
     )
-    return int(result.rowcount or 0)
+    return int(result.rowcount or 0)  # type: ignore[attr-defined, unused-ignore]
 
 
 async def _prune_cloud_backups(
