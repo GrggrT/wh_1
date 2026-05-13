@@ -318,7 +318,7 @@ async def _maybe_send_gap_nudges(bot: Bot, settings: Settings) -> None:
                     gap=info.gap_business_days,
                 )
             try:
-                await bot.send_message(info.user.tg_id, text)
+                await bot.send_message(info.user.tg_id, text, parse_mode="HTML")
                 _last_gap_nudge_by_user[info.user.id] = today
             except TelegramAPIError:
                 logger.warning("gap_nudge_send_failed", user_id=info.user.id)
@@ -376,7 +376,9 @@ async def _maybe_send_debt_pings(bot: Bot, settings: Settings) -> None:
                 ),
             )
             try:
-                await bot.send_message(u.tg_id, "\n".join(lines))
+                await bot.send_message(
+                    u.tg_id, "\n".join(lines), parse_mode="HTML",
+                )
                 _last_debt_ping_iso_week_by_user[u.id] = iso_key
             except TelegramAPIError:
                 logger.warning("debt_ping_send_failed", user_id=u.id)

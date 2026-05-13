@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from decimal import Decimal
+from html import escape as _esc
 from zoneinfo import ZoneInfo
 
 from aiogram import Router
@@ -115,12 +116,13 @@ async def cmd_advance(
     await message.answer(
         t(
             "advance_recorded",
-            name=target_name,
+            name=_esc(target_name),
             amount=_fmt_money(amount),
             date=advance_day_iso,
-            note=note or "—",
+            note=_esc(note) if note else "—",
             currency=db_user.currency,
         ),
+        parse_mode="HTML",
     )
 
 
@@ -149,7 +151,7 @@ async def cmd_my_advances(
             session, user_id=db_user.id, year=year, month=month,
         )
     if not rows:
-        await message.answer(t("advances_empty"))
+        await message.answer(t("advances_empty"), parse_mode="HTML")
         return
     cur = db_user.currency
     lines = [t("advances_header", year=year, month=f"{month:02d}")]
@@ -161,12 +163,12 @@ async def cmd_my_advances(
                 "advance_row",
                 date=a.day.isoformat(),
                 amount=_fmt_money(a.amount),
-                note=a.note or "—",
+                note=_esc(a.note) if a.note else "—",
                 currency=cur,
             ),
         )
     lines.append(t("advances_total", total=_fmt_money(total), currency=cur))
-    await message.answer("\n".join(lines))
+    await message.answer("\n".join(lines), parse_mode="HTML")
 
 
 # --- /crew_advances ---------------------------------------------------------
@@ -221,19 +223,19 @@ async def cmd_crew_advances(
         lines.append(
             t(
                 "crew_advances_member",
-                name=names.get(uid, f"id={uid}"),
+                name=_esc(names.get(uid, f"id={uid}")),
                 total=_fmt_money(sub_total),
                 n=len(advs),
                 currency=db_user.currency,
             ),
         )
     if not any_rows:
-        await message.answer(t("advances_empty"))
+        await message.answer(t("advances_empty"), parse_mode="HTML")
         return
     lines.append(
         t("advances_total", total=_fmt_money(crew_total), currency=db_user.currency),
     )
-    await message.answer("\n".join(lines))
+    await message.answer("\n".join(lines), parse_mode="HTML")
 
 
 # --- /salary ----------------------------------------------------------------
@@ -295,7 +297,7 @@ async def cmd_crew_salary(
         if b.total_hours > 0 or b.advances_total > 0
     ]
     if not rows_with_data:
-        await message.answer(t("crew_salary_empty"))
+        await message.answer(t("crew_salary_empty"), parse_mode="HTML")
         return
 
     lines = [t("crew_salary_header", year=year, month=f"{month:02d}")]
@@ -308,7 +310,7 @@ async def cmd_crew_salary(
         lines.append(
             t(
                 "crew_salary_row",
-                name=m.name,
+                name=_esc(m.name),
                 hours=format_hours(b.total_hours),
                 advances=_fmt_money(b.advances_total),
                 net=_fmt_money(b.net_payable),
@@ -322,4 +324,4 @@ async def cmd_crew_salary(
             currency=db_user.currency,
         ),
     )
-    await message.answer("\n".join(lines))
+    await message.answer("\n".join(lines), parse_mode="HTML")

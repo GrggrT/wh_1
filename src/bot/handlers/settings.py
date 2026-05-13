@@ -68,7 +68,9 @@ async def cmd_settings(message: Message, db_user: User | None = None) -> None:
     async for session in get_session():
         snap = await get_settings(session)
         await session.commit()
-    await message.answer(_body(snap), reply_markup=_keyboard(snap))
+    await message.answer(
+        _body(snap), reply_markup=_keyboard(snap), parse_mode="HTML",
+    )
 
 
 @router.callback_query(F.data.startswith(_CB_TOGGLE))
@@ -86,7 +88,9 @@ async def cb_toggle(query: CallbackQuery, db_user: User | None = None) -> None:
     if isinstance(query.message, Message):
         # Telegram may complain "message not modified"; ignore that.
         with contextlib.suppress(Exception):
-            await query.message.edit_text(_body(snap), reply_markup=_keyboard(snap))
+            await query.message.edit_text(
+                _body(snap), reply_markup=_keyboard(snap), parse_mode="HTML",
+            )
     # Republish the BotCommands menu so the new toggle state is reflected
     # in the user's "/" autocomplete list right away.
     bot = query.bot

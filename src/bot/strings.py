@@ -402,30 +402,31 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
             "Пример: 500 или 500.50"
         ),
         "advance_recorded": (
-            "✅ Аванс зафиксирован.\n"
-            "Работник: {name}\n"
-            "Сумма: {amount} {currency}\n"
+            "<b>✅ Аванс зафиксирован.</b>\n"
+            "Работник: <b>{name}</b>\n"
+            "Сумма: <b>{amount} {currency}</b>\n"
             "Дата: {date}\n"
             "Комментарий: {note}"
         ),
-        "advances_empty": "Авансов за период нет.",
-        "advances_header": "Авансы за {year}-{month}:",
-        "advance_row": "{date}: {amount} {currency} — {note}",
-        "advances_total": "Итого авансов: {total} {currency}",
-        "crew_advances_header": "Авансы бригады за {year}-{month}:",
-        "crew_advances_member": "{name}: {total} {currency} ({n} шт)",
+        "advances_empty": "<i>Авансов за период нет.</i>",
+        "advances_header": "<b>💵 Авансы за {year}-{month}</b>",
+        "advance_row": "{date}: <b>{amount} {currency}</b> — {note}",
+        "advances_total": "<b>Итого авансов: {total} {currency}</b>",
+        "crew_advances_header": "<b>💵 Авансы бригады за {year}-{month}</b>",
+        "crew_advances_member": "{name}: <b>{total} {currency}</b> ({n} шт)",
         "month_format": "⚠ Неверный формат месяца. Используй YYYY-MM, например 2026-05.",
-        "salary_header": "Расчёт за {year}-{month}:",
-        "salary_hours": "Часы: {h}",
-        "salary_earnings": "Начислено: {earnings} {currency}",
-        "salary_advances": "Авансы: {advances} {currency}",
-        "salary_net": "К выплате: {net} {currency}",
-        "crew_salary_header": "Зарплата бригады за {year}-{month}:",
+        "salary_header": "<b>🧮 Расчёт за {year}-{month}</b>",
+        "salary_hours": "Часы: <b>{h}</b>",
+        "salary_earnings": "Начислено: <b>{earnings} {currency}</b>",
+        "salary_advances": "Авансы: <b>{advances} {currency}</b>",
+        "salary_net": "К выплате: <b>{net} {currency}</b>",
+        "crew_salary_header": "<b>🧮 Зарплата бригады за {year}-{month}</b>",
         "crew_salary_row": (
-            "{name}: {hours} ч, авансы {advances} {currency} → к выплате {net} {currency}"
+            "{name}: <b>{hours} ч</b>, авансы {advances} {currency} "
+            "→ к выплате <b>{net} {currency}</b>"
         ),
-        "crew_salary_total": "Итого к выплате: {total} {currency}",
-        "crew_salary_empty": "За этот месяц нет ни часов, ни авансов.",
+        "crew_salary_total": "<b>Итого к выплате: {total} {currency}</b>",
+        "crew_salary_empty": "<i>За этот месяц нет ни часов, ни авансов.</i>",
         "user_not_found": "Пользователь не найден.",
         # Phase 5.3 — evening reminders
         "day_reminder_text": (
@@ -448,7 +449,8 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
         "remind_off_ok": "✅ Вечернее напоминание выключено.",
         # Phase 5.4 — feature toggles
         "settings_header": (
-            "Настройки бота. Нажми, чтобы переключить:"
+            "<b>⚙ Настройки бота</b>\n"
+            "<i>Нажми, чтобы переключить:</i>"
         ),
         "settings_saved": "✅ Сохранено.",
         "settings_label_sites_enabled": "Объекты",
@@ -691,21 +693,22 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
         ),
         # Phase 7.2 — smart reminders
         "gap_nudge_with_last": (
-            "👋 Давно не виделись. Последняя запись часов: {last_day}.\n"
-            "Уже {gap} рабочих дня(-ей) без отметок — добавишь сейчас?"
+            "<b>👋 Давно не виделись.</b>\n"
+            "Последняя запись часов: <b>{last_day}</b>.\n"
+            "Уже <b>{gap}</b> рабочих дня(-ей) без отметок — добавишь сейчас?"
         ),
         "gap_nudge_no_entries": (
-            "👋 Я не вижу у тебя пока ни одной записи часов.\n"
+            "<b>👋 Я не вижу у тебя пока ни одной записи часов.</b>\n"
             "Поставь часы за сегодня командой /h 8 или открой /calendar."
         ),
         "debt_ping_header": (
-            "💼 Старые незакрытые периоды (более 30 дней):"
+            "<b>💼 Старые незакрытые периоды</b> <i>(более 30 дней)</i>:"
         ),
         "debt_ping_row": (
-            "• {period} — остаток {remaining} {currency}"
+            "• <b>{period}</b> — остаток <b>{remaining} {currency}</b>"
         ),
         "debt_ping_footer": (
-            "Итого: {total} {currency}. Подробнее: /owed"
+            "<b>Итого: {total} {currency}.</b> Подробнее: /owed"
         ),
         # Phase 6.7 — period / cashflow / owed accounting
         "period_pick_prompt": "<b>📊 За какой месяц показать?</b>",
