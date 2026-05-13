@@ -24,6 +24,9 @@ def init_sentry(settings: Settings) -> bool:
         dsn=settings.sentry_dsn,
         environment=settings.sentry_environment,
         traces_sample_rate=settings.sentry_traces_sample_rate,
+        # Defensive: SDK default is already False, but pin it explicitly so a
+        # future default-flip can't start sending IP/user data without review.
+        send_default_pii=False,
         integrations=[
             LoggingIntegration(level=logging.INFO, event_level=logging.ERROR),
         ],

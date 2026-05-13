@@ -11,11 +11,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import Any, cast
 
 import structlog
 from sqlalchemy import delete, select
-from sqlalchemy.engine import CursorResult
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.config import Settings
@@ -53,11 +51,8 @@ async def prune_expired(
 async def _prune_share_tokens(
     session: AsyncSession, *, moment: datetime,
 ) -> int:
-    result = cast(
-        "CursorResult[Any]",
-        await session.execute(
-            delete(ShareToken).where(ShareToken.expires_at < moment),
-        ),
+    result = await session.execute(
+        delete(ShareToken).where(ShareToken.expires_at < moment),
     )
     return int(result.rowcount or 0)
 
