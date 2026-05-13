@@ -114,6 +114,7 @@ async def cmd_backup(message: Message, db_user: User | None = None) -> None:
             advances=len(advs),
             payments=len(pays),
         ),
+        parse_mode="HTML",
     )
 
 
@@ -123,7 +124,7 @@ _MAX_BACKUP_BYTES = 5 * 1024 * 1024  # 5 MB is plenty for an accounting XLSX.
 @router.message(Command("restore"))
 async def cmd_restore(message: Message, state: FSMContext) -> None:
     await state.set_state(RestoreFlow.awaiting_document)
-    await message.answer(t("restore_prompt"))
+    await message.answer(t("restore_prompt"), parse_mode="HTML")
 
 
 @router.message(RestoreFlow.awaiting_document, Command("cancel"))
@@ -318,6 +319,7 @@ async def cmd_share_backup(
             token=issued.token,
             expires=issued.expires_at.strftime("%Y-%m-%d %H:%M UTC"),
         ),
+        parse_mode="HTML",
     )
 
 
@@ -384,6 +386,7 @@ async def cmd_backup_to_cloud(
             expires=issued.expires_at.strftime("%Y-%m-%d %H:%M UTC"),
             size_kb=round(issued.size_bytes / 1024, 1),
         ),
+        parse_mode="HTML",
     )
 
 

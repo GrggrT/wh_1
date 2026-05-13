@@ -246,7 +246,9 @@ async def cmd_export_archive(
     buf = build_report_archive(data, db_user, months)
     document = BufferedInputFile(buf.getvalue(), filename=archive_filename(months))
     await message.answer_document(
-        document, caption=t("archive_caption", months=months),
+        document,
+        caption=t("archive_caption", months=months),
+        parse_mode="HTML",
     )
 
 

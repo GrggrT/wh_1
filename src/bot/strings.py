@@ -596,15 +596,18 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
         "period_btn_forecast": "🔮 Прогноз",
         # Phase 7.1 — full XLSX backup
         "backup_caption": (
-            "📦 Резервная копия\n"
-            "Дней: {days}  ·  Авансов: {advances}  ·  Выплат: {payments}"
+            "<b>📦 Резервная копия</b>\n"
+            "Дней: <b>{days}</b>  ·  Авансов: <b>{advances}</b>  "
+            "·  Выплат: <b>{payments}</b>"
         ),
         # Phase 7.8 — /export-archive
-        "archive_caption": "📦 Архив отчёта за {months} мес. (XLSX + PDF + PNG)",
+        "archive_caption": (
+            "<b>📦 Архив отчёта за {months} мес.</b> <i>(XLSX + PDF + PNG)</i>"
+        ),
         # Phase 7.1b — /restore
         "restore_prompt": (
-            "Пришли .xlsx, выгруженный командой /backup. "
-            "Существующие записи не будут изменены — добавятся только новые.\n"
+            "<b>📥 Пришли .xlsx, выгруженный командой /backup.</b>\n"
+            "<i>Существующие записи не будут изменены — добавятся только новые.</i>\n"
             "/cancel — отмена."
         ),
         "restore_need_document": (
@@ -636,10 +639,10 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
             "Выплаты: добавлено <b>{pay_in}</b>, пропущено {pay_skip}"
         ),
         "share_backup_issued": (
-            "🔑 Одноразовый код для переноса данных:\n"
-            "{token}\n"
-            "Действует до {expires}.\n"
-            "На новом аккаунте: /restore_from <код>."
+            "<b>🔑 Одноразовый код для переноса данных:</b>\n"
+            "<code>{token}</code>\n"
+            "Действует до <b>{expires}</b>.\n"
+            "<i>На новом аккаунте:</i> /restore_from &lt;код&gt;."
         ),
         "share_backup_failed": (
             "Не получилось выдать код: {reason}. "
@@ -675,11 +678,11 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
             "Облачное хранилище не настроено — обратись к владельцу."
         ),
         "cloud_backup_uploaded": (
-            "☁ Бэкап загружен в облако.\n"
-            "Ключ: {key}\n"
-            "Размер: {size_kb} КБ\n"
-            "Действует до {expires}.\n"
-            "Восстановить: /restore_from_cloud <ключ>."
+            "<b>☁ Бэкап загружен в облако.</b>\n"
+            "Ключ: <code>{key}</code>\n"
+            "Размер: <b>{size_kb} КБ</b>\n"
+            "Действует до <b>{expires}</b>.\n"
+            "<i>Восстановить:</i> /restore_from_cloud &lt;ключ&gt;."
         ),
         "cloud_backup_failed": (
             "Не получилось загрузить в облако: {reason}."
