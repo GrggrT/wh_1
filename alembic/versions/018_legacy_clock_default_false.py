@@ -14,8 +14,8 @@ from __future__ import annotations
 import sqlalchemy as sa
 from alembic import op
 
-revision = "018_legacy_clock_default_false"
-down_revision = "017_enable_rls"
+revision = "018"
+down_revision = "017"
 branch_labels = None
 depends_on = None
 
