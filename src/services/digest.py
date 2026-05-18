@@ -13,6 +13,26 @@ from src.services.breaks import get_breaks_for_shifts, total_break_hours
 from src.services.reports import compute_hours, compute_period_hours
 
 
+def _days_worked(shifts: list[Shift], tz: ZoneInfo) -> int:
+    """Distinct local-date count among closed shifts (by end_at)."""
+    days: set[date] = set()
+    for s in shifts:
+        if s.end_at is None:
+            continue
+        days.add(s.end_at.astimezone(tz).date())
+    return len(days)
+
+
+def _fmt_hours(value: Decimal) -> str:
+    return str(value.quantize(Decimal("0.01")))
+
+
+def _avg_per_day(total: Decimal, days: int) -> str:
+    if days <= 0:
+        return "0.00"
+    return _fmt_hours(total / Decimal(days))
+
+
 async def build_daily_digest(
     session: AsyncSession,
     tz: ZoneInfo,
@@ -65,13 +85,19 @@ async def build_daily_digest(
         closed_for_hours, today_local, today_local, tz, breaks_by_shift,
     )
 
-    return (
-        f"Сводка за {today_local.isoformat()}:\n"
-        f"• Открыто смен: {started_count}\n"
-        f"• Закрыто: {closed_count} (в т.ч. авто: {auto_closed_today})\n"
-        f"• Сейчас на смене: {open_count}\n"
-        f"• Часы (нетто): {total_hours.quantize(Decimal('0.01'))}"
-    )
+    if not any((started_count, closed_count, open_count)):
+        return f"Сводка за {today_local.isoformat()}: смен не было."
+
+    lines = [f"Сводка за {today_local.isoformat()}:"]
+    if started_count:
+        lines.append(f"• Открыто смен: {started_count}")
+    if closed_count:
+        auto_suffix = f" (в т.ч. авто: {auto_closed_today})" if auto_closed_today else ""
+        lines.append(f"• Закрыто: {closed_count}{auto_suffix}")
+    if open_count:
+        lines.append(f"• Сейчас на смене: {open_count}")
+    lines.append(f"• Часы (нетто): {_fmt_hours(total_hours)}")
+    return "\n".join(lines)
 
 
 async def build_monthly_digest(
@@ -96,45 +122,27 @@ async def build_monthly_digest(
         ),
     )).scalars().all())
 
-    auto_count = sum(1 for s in closed_shifts if s.auto_closed)
+    period_label = f"{year:04d}-{month:02d}"
+    if not closed_shifts:
+        return f"Месячная сводка за {period_label}: смен не было."
 
+    auto_count = sum(1 for s in closed_shifts if s.auto_closed)
     breaks_by_shift = await get_breaks_for_shifts(
         session, [s.id for s in closed_shifts],
     )
     total_hours = compute_period_hours(
         closed_shifts, date(year, month, 1), end_inclusive, tz, breaks_by_shift,
     )
+    days = _days_worked(closed_shifts, tz)
 
-    user_ids = {s.user_id for s in closed_shifts}
-    users_map: dict[int, str] = {}
-    if user_ids:
-        users_rows = (await session.execute(
-            select(User).where(User.id.in_(user_ids)),
-        )).scalars().all()
-        users_map = {u.id: u.name for u in users_rows}
-
-    by_user_hours: dict[int, Decimal] = {uid: Decimal(0) for uid in user_ids}
-    for s in closed_shifts:
-        sh = compute_period_hours(
-            [s], date(year, month, 1), end_inclusive, tz, breaks_by_shift,
-        )
-        by_user_hours[s.user_id] = by_user_hours.get(s.user_id, Decimal(0)) + sh
-
-    top = sorted(by_user_hours.items(), key=lambda kv: kv[1], reverse=True)[:3]
-    top_lines = [
-        f"  • {users_map.get(uid, str(uid))}: {hrs.quantize(Decimal('0.01'))} ч"
-        for uid, hrs in top if hrs > 0
-    ]
-    top_block = "\n".join(top_lines) if top_lines else "  • —"
-
-    period_label = f"{year:04d}-{month:02d}"
-    return (
-        f"Месячная сводка за {period_label}:\n"
-        f"• Закрыто смен: {len(closed_shifts)} (в т.ч. авто: {auto_count})\n"
-        f"• Часы (нетто): {total_hours}\n"
-        f"• Работников: {len(user_ids)}\n"
-        f"Топ по часам:\n{top_block}"
-    )
+    lines = [f"Месячная сводка за {period_label}:"]
+    auto_suffix = f" (в т.ч. авто: {auto_count})" if auto_count else ""
+    lines.append(f"• Закрыто смен: {len(closed_shifts)}{auto_suffix}")
+    lines.append(f"• Часы (нетто): {_fmt_hours(total_hours)}")
+    lines.append(f"• Дней работы: {days}")
+    if days:
+        lines.append(f"• Среднее в день: {_avg_per_day(total_hours, days)} ч")
+    return "\n".join(lines)
 
 
 def previous_full_week(today: date) -> tuple[date, date]:
@@ -165,45 +173,27 @@ async def build_weekly_digest(
         ),
     )).scalars().all())
 
-    auto_count = sum(1 for s in closed_shifts if s.auto_closed)
+    label = f"{week_start.isoformat()} … {week_end.isoformat()}"
+    if not closed_shifts:
+        return f"Недельная сводка ({label}): смен не было."
 
+    auto_count = sum(1 for s in closed_shifts if s.auto_closed)
     breaks_by_shift = await get_breaks_for_shifts(
         session, [s.id for s in closed_shifts],
     )
     total_hours = compute_period_hours(
         closed_shifts, week_start, week_end, tz, breaks_by_shift,
     )
+    days = _days_worked(closed_shifts, tz)
 
-    user_ids = {s.user_id for s in closed_shifts}
-    users_map: dict[int, str] = {}
-    if user_ids:
-        users_rows = (await session.execute(
-            select(User).where(User.id.in_(user_ids)),
-        )).scalars().all()
-        users_map = {u.id: u.name for u in users_rows}
-
-    by_user_hours: dict[int, Decimal] = {uid: Decimal(0) for uid in user_ids}
-    for s in closed_shifts:
-        sh = compute_period_hours(
-            [s], week_start, week_end, tz, breaks_by_shift,
-        )
-        by_user_hours[s.user_id] = by_user_hours.get(s.user_id, Decimal(0)) + sh
-
-    top = sorted(by_user_hours.items(), key=lambda kv: kv[1], reverse=True)[:3]
-    top_lines = [
-        f"  • {users_map.get(uid, str(uid))}: {hrs.quantize(Decimal('0.01'))} ч"
-        for uid, hrs in top if hrs > 0
-    ]
-    top_block = "\n".join(top_lines) if top_lines else "  • —"
-
-    label = f"{week_start.isoformat()} … {week_end.isoformat()}"
-    return (
-        f"Недельная сводка ({label}):\n"
-        f"• Закрыто смен: {len(closed_shifts)} (в т.ч. авто: {auto_count})\n"
-        f"• Часы (нетто): {total_hours.quantize(Decimal('0.01'))}\n"
-        f"• Работников: {len(user_ids)}\n"
-        f"Топ по часам:\n{top_block}"
-    )
+    lines = [f"Недельная сводка ({label}):"]
+    auto_suffix = f" (в т.ч. авто: {auto_count})" if auto_count else ""
+    lines.append(f"• Закрыто смен: {len(closed_shifts)}{auto_suffix}")
+    lines.append(f"• Часы (нетто): {_fmt_hours(total_hours)}")
+    lines.append(f"• Дней работы: {days}")
+    if days:
+        lines.append(f"• Среднее в день: {_avg_per_day(total_hours, days)} ч")
+    return "\n".join(lines)
 
 
 def previous_month(year: int, month: int) -> tuple[int, int]:
