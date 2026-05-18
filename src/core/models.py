@@ -267,7 +267,7 @@ class AppSettings(Base):
         Boolean, nullable=False, server_default="false",
     )
     legacy_clock_inout_enabled: Mapped[bool] = mapped_column(
-        Boolean, nullable=False, server_default="true",
+        Boolean, nullable=False, server_default="false",
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
