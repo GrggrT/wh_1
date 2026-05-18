@@ -8,19 +8,9 @@ from zoneinfo import ZoneInfo
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.core.models import Shift, Site, User
+from src.core.models import DayEntry, Shift, Site, User
 from src.services.breaks import get_breaks_for_shifts, total_break_hours
 from src.services.reports import compute_hours, compute_period_hours
-
-
-def _days_worked(shifts: list[Shift], tz: ZoneInfo) -> int:
-    """Distinct local-date count among closed shifts (by end_at)."""
-    days: set[date] = set()
-    for s in shifts:
-        if s.end_at is None:
-            continue
-        days.add(s.end_at.astimezone(tz).date())
-    return len(days)
 
 
 def _fmt_hours(value: Decimal) -> str:
@@ -33,71 +23,50 @@ def _avg_per_day(total: Decimal, days: int) -> str:
     return _fmt_hours(total / Decimal(days))
 
 
+async def _day_entries_in_range(
+    session: AsyncSession,
+    start: date,
+    end_inclusive: date,
+) -> list[DayEntry]:
+    """Return all DayEntry rows whose `day` falls in [start, end_inclusive]."""
+    rows = (await session.execute(
+        select(DayEntry).where(
+            DayEntry.day >= start,
+            DayEntry.day <= end_inclusive,
+        ),
+    )).scalars().all()
+    return list(rows)
+
+
+def _sum_hours(entries: list[DayEntry]) -> Decimal:
+    total = Decimal(0)
+    for e in entries:
+        total += e.hours
+    return total
+
+
+def _distinct_days(entries: list[DayEntry]) -> int:
+    return len({e.day for e in entries})
+
+
 async def build_daily_digest(
     session: AsyncSession,
     tz: ZoneInfo,
     now: datetime | None = None,
 ) -> str:
-    """Return a short Russian summary of today's activity in tz."""
+    """Daily summary based on DayEntry rows for today (in tz)."""
     current = (now or datetime.now(tz=tz)).astimezone(tz)
     today_local = current.date()
-    period_start = datetime.combine(today_local, time.min, tzinfo=tz)
-    period_end = period_start + timedelta(days=1)
 
-    started_count = (await session.execute(
-        select(func.count(Shift.id)).where(
-            Shift.start_at >= period_start,
-            Shift.start_at < period_end,
-        ),
-    )).scalar_one()
+    entries = await _day_entries_in_range(session, today_local, today_local)
+    if not entries:
+        return f"Сводка за {today_local.isoformat()}: часы не записаны."
 
-    closed_count = (await session.execute(
-        select(func.count(Shift.id)).where(
-            Shift.end_at >= period_start,
-            Shift.end_at < period_end,
-        ),
-    )).scalar_one()
-
-    open_count = (await session.execute(
-        select(func.count(Shift.id)).where(Shift.end_at.is_(None)),
-    )).scalar_one()
-
-    auto_closed_today = (await session.execute(
-        select(func.count(Shift.id)).where(
-            Shift.auto_closed.is_(True),
-            Shift.end_at >= period_start,
-            Shift.end_at < period_end,
-        ),
-    )).scalar_one()
-
-    overlapping_shifts = list((await session.execute(
-        select(Shift).where(
-            Shift.start_at < period_end,
-            (Shift.end_at > period_start) | (Shift.end_at.is_(None)),
-        ),
-    )).scalars().all())
-
-    closed_for_hours = [s for s in overlapping_shifts if s.end_at is not None]
-    breaks_by_shift = await get_breaks_for_shifts(
-        session, [s.id for s in closed_for_hours],
+    total = _sum_hours(entries)
+    return (
+        f"Сводка за {today_local.isoformat()}:\n"
+        f"• Часы: {_fmt_hours(total)}"
     )
-    total_hours = compute_period_hours(
-        closed_for_hours, today_local, today_local, tz, breaks_by_shift,
-    )
-
-    if not any((started_count, closed_count, open_count)):
-        return f"Сводка за {today_local.isoformat()}: смен не было."
-
-    lines = [f"Сводка за {today_local.isoformat()}:"]
-    if started_count:
-        lines.append(f"• Открыто смен: {started_count}")
-    if closed_count:
-        auto_suffix = f" (в т.ч. авто: {auto_closed_today})" if auto_closed_today else ""
-        lines.append(f"• Закрыто: {closed_count}{auto_suffix}")
-    if open_count:
-        lines.append(f"• Сейчас на смене: {open_count}")
-    lines.append(f"• Часы (нетто): {_fmt_hours(total_hours)}")
-    return "\n".join(lines)
 
 
 async def build_monthly_digest(
@@ -106,42 +75,25 @@ async def build_monthly_digest(
     year: int,
     month: int,
 ) -> str:
-    """Return a Russian summary of the given calendar month (in tz)."""
-    period_start = datetime.combine(date(year, month, 1), time.min, tzinfo=tz)
+    """Monthly summary based on DayEntry rows for the given calendar month."""
     next_month = (
         date(year + 1, 1, 1) if month == 12 else date(year, month + 1, 1)
     )
-    period_end = datetime.combine(next_month, time.min, tzinfo=tz)
     end_inclusive = next_month - timedelta(days=1)
-
-    closed_shifts = list((await session.execute(
-        select(Shift).where(
-            Shift.end_at.is_not(None),
-            Shift.end_at >= period_start,
-            Shift.end_at < period_end,
-        ),
-    )).scalars().all())
-
     period_label = f"{year:04d}-{month:02d}"
-    if not closed_shifts:
-        return f"Месячная сводка за {period_label}: смен не было."
+    entries = await _day_entries_in_range(session, date(year, month, 1), end_inclusive)
+    if not entries:
+        return f"Месячная сводка за {period_label}: часы не записаны."
 
-    auto_count = sum(1 for s in closed_shifts if s.auto_closed)
-    breaks_by_shift = await get_breaks_for_shifts(
-        session, [s.id for s in closed_shifts],
-    )
-    total_hours = compute_period_hours(
-        closed_shifts, date(year, month, 1), end_inclusive, tz, breaks_by_shift,
-    )
-    days = _days_worked(closed_shifts, tz)
-
-    lines = [f"Месячная сводка за {period_label}:"]
-    auto_suffix = f" (в т.ч. авто: {auto_count})" if auto_count else ""
-    lines.append(f"• Закрыто смен: {len(closed_shifts)}{auto_suffix}")
-    lines.append(f"• Часы (нетто): {_fmt_hours(total_hours)}")
-    lines.append(f"• Дней работы: {days}")
+    total = _sum_hours(entries)
+    days = _distinct_days(entries)
+    lines = [
+        f"Месячная сводка за {period_label}:",
+        f"• Часы: {_fmt_hours(total)}",
+        f"• Дней работы: {days}",
+    ]
     if days:
-        lines.append(f"• Среднее в день: {_avg_per_day(total_hours, days)} ч")
+        lines.append(f"• Среднее в день: {_avg_per_day(total, days)} ч")
     return "\n".join(lines)
 
 
@@ -159,40 +111,21 @@ async def build_weekly_digest(
     week_start: date,
     week_end: date,
 ) -> str:
-    """Return a Russian summary of one calendar week (Mon..Sun) in tz."""
-    period_start = datetime.combine(week_start, time.min, tzinfo=tz)
-    period_end = datetime.combine(
-        week_end + timedelta(days=1), time.min, tzinfo=tz,
-    )
-
-    closed_shifts = list((await session.execute(
-        select(Shift).where(
-            Shift.end_at.is_not(None),
-            Shift.end_at >= period_start,
-            Shift.end_at < period_end,
-        ),
-    )).scalars().all())
-
+    """Weekly summary based on DayEntry rows for [week_start, week_end]."""
     label = f"{week_start.isoformat()} … {week_end.isoformat()}"
-    if not closed_shifts:
-        return f"Недельная сводка ({label}): смен не было."
+    entries = await _day_entries_in_range(session, week_start, week_end)
+    if not entries:
+        return f"Недельная сводка ({label}): часы не записаны."
 
-    auto_count = sum(1 for s in closed_shifts if s.auto_closed)
-    breaks_by_shift = await get_breaks_for_shifts(
-        session, [s.id for s in closed_shifts],
-    )
-    total_hours = compute_period_hours(
-        closed_shifts, week_start, week_end, tz, breaks_by_shift,
-    )
-    days = _days_worked(closed_shifts, tz)
-
-    lines = [f"Недельная сводка ({label}):"]
-    auto_suffix = f" (в т.ч. авто: {auto_count})" if auto_count else ""
-    lines.append(f"• Закрыто смен: {len(closed_shifts)}{auto_suffix}")
-    lines.append(f"• Часы (нетто): {_fmt_hours(total_hours)}")
-    lines.append(f"• Дней работы: {days}")
+    total = _sum_hours(entries)
+    days = _distinct_days(entries)
+    lines = [
+        f"Недельная сводка ({label}):",
+        f"• Часы: {_fmt_hours(total)}",
+        f"• Дней работы: {days}",
+    ]
     if days:
-        lines.append(f"• Среднее в день: {_avg_per_day(total_hours, days)} ч")
+        lines.append(f"• Среднее в день: {_avg_per_day(total, days)} ч")
     return "\n".join(lines)
 
 
